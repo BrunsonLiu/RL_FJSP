@@ -159,15 +159,42 @@ Good next research directions:
 6. Add curriculum from tiny instances to MK01-MK15.
 7. Compare against OR-Tools, tabu search, and classic dispatching rules.
 
-## Current Verified Result
+## Verified Results
 
-On Brandimarte `mk01`:
+### Brandimarte MK01 (single instance)
 
 ```text
 known optimum: 40
 earliest-finish heuristic: 57
 random mean: 104.8
 REINFORCE dispatch policy, 3 seeds x 200 episodes: 43 mean / 43 best / 0.0 std
+Two-stage AC, seed 0, 100 episodes: 48
+Graph AC, default config, 500 episodes: 54
+Graph AC, tuned config (lr 1e-3, hidden 128, rounds 3), 200 episodes: 60
+Graph PPO, default config, 200 episodes: 85
 ```
 
-This means the baseline is promising on `mk01`, but it is not enough to claim broad generalization.
+Full single-instance study: `data/results/comparison_three_agents_mk01_100ep.md`.
+
+### Brandimarte MK01–MK10 (10 instances, 4 agents)
+
+```text
+script: scripts/run_brandimarte_baseline.py
+budget: REINFORCE 50 ep / AC 50 ep / GAC 50 ep / GPPO 30 ep
+seed: 0
+```
+
+Greedy makespan, lower is better. The full table is in
+`data/results/baseline_brandimarte_matrix.md`. Summary:
+
+- **REINFORCE is the best agent on 10/10 instances** at this budget.
+- Two-stage AC is 2nd on 8/10 instances.
+- Graph AC and Graph PPO are systematically the worst — at 50 ep the graph
+  encoder is under-trained, not just lower-variance.
+- REINFORCE beats the earliest-finish heuristic on 10/10 instances
+  (gap from −1.1% on mk04 to −54.8% on mk02).
+- REINFORCE is within 10% of the known optimum on mk01 (+7.5%),
+  mk03 (+9.3%) and mk08 (+3.1%).
+
+The matrix is the new single-source-of-truth for the per-instance ranking and
+is the basis for the next-round decisions in `docs/large_instances.md`.

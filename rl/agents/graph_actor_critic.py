@@ -115,6 +115,69 @@ class GraphTwoStageActorCriticAgent:
         value = self.model.value(graph, op_embeddings, machine_embeddings)
         return machine_actions[machine_pos], log_prob, value, entropy
 
+    def evaluate_action(
+        self,
+        env: FJSPDispatchEnv,
+        action: DispatchAction,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        graph = build_operation_machine_graph(env, device=self.device)
+        op_embeddings, machine_embeddings = self.model.encode(graph)
+        next_indices = torch.tensor(graph.next_op_indices, dtype=torch.long, device=self.device)
+
+        target_op_idx = None
+        for idx in next_indices.tolist():
+            if graph.operation_refs[idx].job == action.job:
+                target_op_idx = idx
+                break
+        if target_op_idx is None:
+            raise ValueError("Chosen job is not schedulable from this state.")
+        job_logits = self.model.score_jobs(op_embeddings, next_indices)
+        next_op_index = (next_indices == target_op_idx).nonzero(as_tuple=False).flatten()
+        if next_op_index.numel() != 1:
+            raise RuntimeError("Expected exactly one match for target operation in next_op_indices.")
+        job_pos = int(next_op_index.item())
+        job_log_prob = torch.log_softmax(job_logits, dim=-1)[job_pos]
+        job_entropy = -(torch.softmax(job_logits, dim=-1) * torch.log_softmax(job_logits, dim=-1)).sum()
+
+        machine_actions = [a for a in env.available_actions() if a.job == action.job]
+        machine_indices = torch.tensor(
+            [a.machine for a in machine_actions], dtype=torch.long, device=self.device
+        )
+        durations = torch.tensor(
+            [
+                next(
+                    option.duration
+                    for option in env.instance.jobs[a.job].operations[env.job_next_op[a.job]].options
+                    if option.machine == a.machine
+                )
+                / float(instance_time_scale(env))
+                for a in machine_actions
+            ],
+            dtype=torch.float32,
+            device=self.device,
+        )
+        machine_logits = self.model.score_machines(
+            op_embeddings[target_op_idx],
+            machine_embeddings,
+            machine_indices,
+            durations,
+        )
+        machine_pos = next(
+            (i for i, a in enumerate(machine_actions) if a.machine == action.machine),
+            None,
+        )
+        if machine_pos is None:
+            raise ValueError("Chosen machine is not available for this job.")
+        machine_log_prob = torch.log_softmax(machine_logits, dim=-1)[machine_pos]
+        machine_entropy = -(
+            torch.softmax(machine_logits, dim=-1) * torch.log_softmax(machine_logits, dim=-1)
+        ).sum()
+
+        log_prob = job_log_prob + machine_log_prob
+        entropy = job_entropy + machine_entropy
+        value = self.model.value(graph, op_embeddings, machine_embeddings)
+        return log_prob, value, entropy
+
     def rollout(self, env: FJSPDispatchEnv, *, greedy: bool = False, seed: int | None = None) -> GraphActorCriticEpisode:
         env.reset()
         rng = Random(seed) if seed is not None else None

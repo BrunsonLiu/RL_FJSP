@@ -56,6 +56,13 @@ python -m rl.train_graph_actor_critic --episodes 200
 python -m rl.evaluate_graph_actor_critic
 ```
 
+Train and evaluate the graph two-stage PPO policy:
+
+```powershell
+python -m rl.train_graph_ppo --episodes 200
+python -m rl.evaluate_graph_ppo
+```
+
 Run a compact benchmark table:
 
 ```powershell

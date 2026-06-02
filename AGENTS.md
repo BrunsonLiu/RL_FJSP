@@ -75,6 +75,14 @@ python -m rl.evaluate_graph_actor_critic
 python scripts/validate_schedule.py data/instances/brandimarte/mk01.txt data/results/graph_actor_critic_mk01_best_schedule.json
 ```
 
+Train and evaluate the graph two-stage PPO baseline:
+
+```powershell
+python -m rl.train_graph_ppo --episodes 200
+python -m rl.evaluate_graph_ppo
+python scripts/validate_schedule.py data/instances/brandimarte/mk01.txt data/results/graph_ppo_mk01_best_schedule.json
+```
+
 Run large Brandimarte diagnostics:
 
 ```powershell

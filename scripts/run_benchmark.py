@@ -11,7 +11,7 @@ from time import perf_counter
 import _bootstrap  # noqa: F401
 from fjsp.env import FJSPDispatchEnv
 from fjsp.scheduler.dispatch_rules import rollout_earliest_finish
-from rl.agents import train_actor_critic, train_graph_actor_critic, train_reinforce
+from rl.agents import train_actor_critic, train_graph_actor_critic, train_graph_ppo, train_reinforce
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -99,6 +99,8 @@ def run_one(
                 agent, history = train_actor_critic(env, episodes=episodes, seed=seed)
             elif agent_name == "graph_actor_critic":
                 agent, history = train_graph_actor_critic(env, episodes=episodes, seed=seed)
+            elif agent_name == "graph_ppo":
+                agent, history = train_graph_ppo(env, episodes=episodes, seed=seed)
             else:
                 agent, history = train_reinforce(env, episodes=episodes, seed=seed)
             greedy_result = agent.rollout(env, greedy=True)
@@ -152,7 +154,7 @@ def main() -> None:
     parser.add_argument("--brandimarte-count", type=int, default=5, help="Run MK01..MK<count>.")
     parser.add_argument("--random-rollouts", type=int, default=5)
     parser.add_argument("--episodes", type=int, default=50, help="REINFORCE episodes per instance; use 0 to skip RL.")
-    parser.add_argument("--agent", choices=["reinforce", "actor_critic", "graph_actor_critic"], default="reinforce")
+    parser.add_argument("--agent", choices=["reinforce", "actor_critic", "graph_actor_critic", "graph_ppo"], default="reinforce")
     parser.add_argument("--seed", type=int, default=0, help="Backward-compatible single-seed argument.")
     parser.add_argument("--seeds", default="", help="Comma-separated training seeds, e.g. 0,1,2.")
     parser.add_argument("--csv-out", default=str(DEFAULT_OUTPUT_CSV))

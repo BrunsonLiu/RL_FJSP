@@ -8,7 +8,8 @@
 - Earliest-finish heuristic: 57
 - Random rollout mean (3 seeds): 106.333
 - REINFORCE and Two-Stage AC: 100 episodes, seed 0
-- Graph AC: tried 100 / 300 / 500 episodes (default config) and 200 episodes (tuned config), all seed 0
+- Graph AC: tried 100 / 300 / 500 episodes (default config), 200 episodes (tuned config), all seed 0
+- Graph PPO: 200 episodes, default PPO config, seed 0
 - Evaluation: greedy rollout
 - Each RL schedule below was independently re-checked by `scripts/validate_schedule.py`
 
@@ -22,9 +23,11 @@
 | Graph AC default (300 ep)      | 58            | 58   | 0.0 | ~140           | +18 (45%)  | +1 (1.8%)          |
 | Graph AC default (500 ep)      | 54            | 54   | 0.0 | ~235           | +14 (35%)  | −3 (5.3%)          |
 | Graph AC tuned (200 ep)        | 60            | 60   | 0.0 | ~210           | +20 (50%)  | +3 (5.3%)          |
+| Graph PPO (200 ep)             | 85            | 85   | 0.0 | ~75            | +45 (113%) | +28 (49.1%)        |
 
-**Tuned config**: `lr=1e-3, hidden_dim=128, gnn_rounds=3`
-**Default config**: `lr=3e-3, hidden_dim=64, gnn_rounds=2`
+**Tuned AC config**: `lr=1e-3, hidden_dim=128, gnn_rounds=3`
+**Default AC config**: `lr=3e-3, hidden_dim=64, gnn_rounds=2`
+**PPO config**: `lr=3e-4, clip=0.2, gamma=0.99, gae_lambda=0.95, K_epochs=4, minibatch_size=16`
 
 ## Graph AC Training Trajectories
 
@@ -79,6 +82,7 @@
 | Two-Stage AC  | `data/results/actor_critic_mk01_best_schedule.json`            | valid, makespan 48 |
 | Graph AC default 500 ep | `data/results/graph_actor_critic_mk01_500_schedule.json`     | valid, makespan 54 |
 | Graph AC tuned 200 ep  | `data/results/graph_actor_critic_mk01_200_tuned_schedule.json` | valid, makespan 60 |
+| Graph PPO 200 ep       | `data/results/graph_ppo_mk01_200_best_schedule.json`         | valid, makespan 85 |
 
 ## Why Graph AC underperforms — updated diagnosis
 

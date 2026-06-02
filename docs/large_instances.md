@@ -10,6 +10,10 @@ MK11-MK15
 
 These instances have 30 jobs and between 5 and 15 machines.
 
+The single-instance `mk01`–`mk10` matrix is in
+`data/results/baseline_brandimarte_matrix.md` and is referenced from
+`docs/algorithm.md` §Verified Results.
+
 ## Commands
 
 Baseline only:
@@ -24,7 +28,7 @@ Short RL run:
 python scripts/run_benchmark.py --brandimarte-start 11 --brandimarte-count 5 --random-rollouts 3 --episodes 50 --seeds 0
 ```
 
-## Current Result
+## Current Result (MK11–MK15, 1 seed, 50 ep)
 
 Result file:
 
@@ -62,4 +66,33 @@ To make large-instance results credible:
 3. Add entropy regularization or move to PPO/actor-critic.
 4. Train across multiple instances instead of training each instance from scratch.
 5. Save best schedule per instance and validate it externally.
+
+## Why we are not done yet — lessons from the 10-instance matrix
+
+`data/results/baseline_brandimarte_matrix.md` (and its CSV/JSON siblings) shows
+that with the current per-instance 50-episode budget:
+
+- REINFORCE beats every other agent on all 10 Brandimarte instances.
+- The graph-based agents (Graph AC, Graph PPO) are *systematically worse than
+  the random rollout mean* on the larger instances (mk03, mk05, mk07, mk08,
+  mk09, mk10).
+
+This is the central issue blocking any "graph encoder = SOTA" claim. The
+remedies we plan to try first, in order of expected cost/benefit, are:
+
+1. **Cross-instance training for the graph encoder.** Train one Graph AC / PPO
+   policy across all 10 Brandimarte instances with instance-index as part of
+   the input. This gives the encoder enough data to actually use its
+   parameters and matches how FJSP-RL papers report results.
+2. **Imitation pretraining (BC) on the earliest-finish heuristic.** Warm-start
+   the graph encoder with supervised learning on `(state, action)` pairs from
+   earliest-finish rollouts, then fine-tune with REINFORCE / PPO. The current
+   per-instance training starts from a random policy and the graph encoder
+   cannot recover within 50–100 episodes.
+3. **Dense per-step reward** so the value head in PPO has a learnable signal on
+   every step instead of a single terminal scalar.
+4. **Per-instance fine-tuning from the cross-instance checkpoint.** After (1)
+   and/or (2), do a short per-instance fine-tune and re-run the matrix. The
+   expectation is that the graph agents then flip the ranking in their favor
+   on at least the hard instances (mk04, mk08, mk09).
 

@@ -1,0 +1,11 @@
+instance,jobs,machines,operations,optimum,earliest_finish,random_best,random_mean,reinforce,actor_critic,graph_actor_critic,graph_ppo,best_method,best_value
+mk01,10,6,55,40,57,102,106.333,43,49,110,73,reinforce,43
+mk02,10,6,58,,62,80,87,28,80,127,114,reinforce,28
+mk03,15,8,150,204,331,456,493,223,506,891,706,reinforce,223
+mk04,15,8,90,60,91,166,166.667,90,128,168,168,reinforce,90
+mk05,15,4,106,,220,275,325.667,183,374,387,450,reinforce,183
+mk06,10,10,150,,79,223,245,77,229,238,373,reinforce,77
+mk07,20,5,100,,204,377,385,162,321,554,451,reinforce,162
+mk08,20,10,225,523,618,798,845.667,539,613,1343,1546,reinforce,539
+mk09,20,10,240,307,433,732,754,408,1336,1740,1310,reinforce,408
+mk10,20,15,240,,406,672,702.667,258,896,1621,1239,reinforce,258
