@@ -1,0 +1,6 @@
+instance,jobs,machines,operations,earliest_finish,random_mean,random_best,random_worst,rl_greedy,rl_sample,seconds
+mk01,10,6,55,57,104.8,98,115,117,107,7.34
+mk02,10,6,58,62,87,78,96,30,81,9.544
+mk03,15,8,150,331,500,456,565,225,448,46.149
+mk04,15,8,90,91,164.8,151,173,90,130,13.369
+mk05,15,4,106,220,312.8,275,362,183,299,15.684

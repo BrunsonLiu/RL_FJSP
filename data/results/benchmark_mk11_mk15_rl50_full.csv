@@ -1,0 +1,6 @@
+instance,jobs,machines,operations,optimum,lower_bound,upper_bound,earliest_finish,random_mean,random_best,random_worst,rl_best,rl_mean,rl_std,rl_seed_results,seconds,best_method
+mk11,30,5,179,,594,615,706,1105.667,1014,1161,660,660,0.0,"[{""seed"": 0, ""greedy_makespan"": 660, ""best_seen"": 660, ""best_episode"": 20}]",24.33,rl
+mk12,30,10,193,508,,,700,901.333,860,950,924,924,0.0,"[{""seed"": 0, ""greedy_makespan"": 924, ""best_seen"": 924, ""best_episode"": 5}]",24.961,baseline
+mk13,30,10,231,,353,430,622,1043.333,1004,1098,483,483,0.0,"[{""seed"": 0, ""greedy_makespan"": 483, ""best_seen"": 483, ""best_episode"": 40}]",22.696,rl
+mk14,30,15,277,694,,,833,1347,1281,1433,1608,1608,0.0,"[{""seed"": 0, ""greedy_makespan"": 1608, ""best_seen"": 1608, ""best_episode"": 5}]",34.216,baseline
+mk15,30,15,284,,283,341,549,1103,1005,1197,442,442,0.0,"[{""seed"": 0, ""greedy_makespan"": 442, ""best_seen"": 442, ""best_episode"": 35}]",45.181,rl

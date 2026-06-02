@@ -1,0 +1,2 @@
+instance,jobs,machines,operations,optimum,lower_bound,upper_bound,earliest_finish,random_mean,random_best,random_worst,rl_greedy,rl_sample,seconds,best_method
+mk01,10,6,55,40,,,57,102,102,102,191,95,1.652,baseline

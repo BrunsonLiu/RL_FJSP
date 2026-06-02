@@ -1,0 +1,9 @@
+# Tiny FJSP instance for smoke tests.
+# Format:
+# jobs machines
+# For each job: num_ops  num_machines machine_id processing_time ...
+# Machine ids in .fjs files are 1-based; parser converts them to 0-based.
+2 2
+2 2 1 3 2 4 1 2 2
+2 1 1 2 2 1 4 2 3
+

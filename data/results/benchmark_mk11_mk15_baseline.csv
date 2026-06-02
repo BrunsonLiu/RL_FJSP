@@ -1,0 +1,6 @@
+instance,jobs,machines,operations,optimum,lower_bound,upper_bound,earliest_finish,random_mean,random_best,random_worst,rl_best,rl_mean,rl_std,rl_seed_results,seconds,best_method
+mk11,30,5,179,,594,615,706,1147,1014,1226,,,,[],0.098,baseline
+mk12,30,10,193,508,,,700,905.8,860,965,,,,[],0.107,baseline
+mk13,30,10,231,,353,430,622,1074.4,1004,1123,,,,[],0.181,baseline
+mk14,30,15,277,694,,,833,1289.6,1184,1433,,,,[],0.17,baseline
+mk15,30,15,284,,283,341,549,1115.4,1005,1197,,,,[],0.233,baseline

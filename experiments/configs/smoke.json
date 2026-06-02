@@ -1,0 +1,7 @@
+{
+  "name": "smoke",
+  "instance": "data/instances/tiny_2x2.fjs",
+  "seed": 0,
+  "objective": "makespan"
+}
+

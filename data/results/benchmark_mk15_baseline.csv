@@ -1,0 +1,2 @@
+instance,jobs,machines,operations,optimum,lower_bound,upper_bound,earliest_finish,random_mean,random_best,random_worst,rl_best,rl_mean,rl_std,rl_seed_results,seconds,best_method
+mk15,30,15,284,,283,341,549,1101,1005,1197,,,,[],0.131,baseline

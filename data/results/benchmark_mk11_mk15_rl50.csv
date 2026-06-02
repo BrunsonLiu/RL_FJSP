@@ -1,0 +1,3 @@
+instance,jobs,machines,operations,optimum,lower_bound,upper_bound,earliest_finish,random_mean,random_best,random_worst,rl_best,rl_mean,rl_std,rl_seed_results,seconds,best_method
+mk11,30,5,179,,594,615,706,1105.667,1014,1161,660,660,0.0,"[{""seed"": 0, ""greedy_makespan"": 660, ""best_seen"": 660, ""best_episode"": 20}]",24.294,rl
+mk15,30,15,284,,283,341,549,1103,1005,1197,442,442,0.0,"[{""seed"": 0, ""greedy_makespan"": 442, ""best_seen"": 442, ""best_episode"": 35}]",43.997,rl
