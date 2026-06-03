@@ -198,3 +198,20 @@ Greedy makespan, lower is better. The full table is in
 
 The matrix is the new single-source-of-truth for the per-instance ranking and
 is the basis for the next-round decisions in `docs/large_instances.md`.
+
+### BC imitation pretraining + AC fine-tuning on MK01
+
+```text
+script: rl/train_imitation.py (BC) + train_graph_actor_critic with init_model= (AC)
+setup:  100 rollouts earliest-finish demos, 20 BC epochs, 500 AC episodes lr=3e-5
+result: BC-only greedy = 57 (== earliest-finish heuristic)
+        BC + AC (500 ep) = 49
+```
+
+Per-action details: `data/results/bc_ac_mk01_results.md`.
+
+This is the first time the graph encoder (with BC warm-start) is actually
+useful on a single instance — it beats every graph-from-scratch run on
+mk01 and lands within 6 makespan units of REINFORCE. The PPO variant of
+the same warm-start does not improve past 57; AC with a low lr is the
+correct tool here.

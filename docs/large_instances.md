@@ -96,3 +96,20 @@ remedies we plan to try first, in order of expected cost/benefit, are:
    expectation is that the graph agents then flip the ranking in their favor
    on at least the hard instances (mk04, mk08, mk09).
 
+## BC + AC result on MK01 — first graph model that beats the heuristic
+
+`data/results/bc_ac_mk01_results.md` documents a BC warm-start followed by AC
+fine-tuning on a single instance:
+
+```text
+BC only (100 rollouts, 20 epochs, lr=1e-3)          -> greedy 57
+BC + AC (500 ep, lr=3e-5)                           -> greedy 49
+earliest-finish heuristic                            -> 57
+REINFORCE from scratch (100 ep)                      -> 43
+Graph AC from scratch (500 ep default)               -> 54
+```
+
+The graph encoder is no longer the worst. The next step is to do this on
+all 10 Brandimarte instances and then on MK11–MK15, then add cross-instance
+BC pretraining.
+

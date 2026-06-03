@@ -235,10 +235,14 @@ def train_graph_actor_critic(
     value_coef: float = 0.5,
     entropy_coef: float = 0.01,
     device: str = "cpu",
+    init_model: str | Path | None = None,
 ) -> tuple[GraphTwoStageActorCriticAgent, list[dict[str, float]]]:
     torch.manual_seed(seed)
     rng = Random(seed)
-    agent = GraphTwoStageActorCriticAgent.create(hidden_dim=hidden_dim, gnn_rounds=gnn_rounds, device=device)
+    if init_model is not None:
+        agent = GraphTwoStageActorCriticAgent.load(init_model, hidden_dim=hidden_dim, device=device)
+    else:
+        agent = GraphTwoStageActorCriticAgent.create(hidden_dim=hidden_dim, gnn_rounds=gnn_rounds, device=device)
     optimizer = torch.optim.Adam(agent.model.parameters(), lr=lr)
     history: list[dict[str, float]] = []
     best_makespan: int | None = None

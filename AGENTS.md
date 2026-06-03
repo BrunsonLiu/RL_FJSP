@@ -83,6 +83,24 @@ python -m rl.evaluate_graph_ppo
 python scripts/validate_schedule.py data/instances/brandimarte/mk01.txt data/results/graph_ppo_mk01_best_schedule.json
 ```
 
+Behavioral cloning pretraining on the earliest-finish dispatch rule, then AC fine-tuning:
+
+```powershell
+python -m rl.train_imitation --instance data/instances/brandimarte/mk01.txt --rollouts 100 --epochs 20 --batch-size 32 --lr 1e-3 --hidden-dim 64 --gnn-rounds 2 --seed 0
+python -m rl.train_imitation_ppo --instance data/instances/brandimarte/mk01.txt --init-model data/results/imitation_mk01_best.pt --episodes 200 --lr 3e-5 --K-epochs 1 --entropy-coef 0.0 --seed 0
+python scripts/validate_schedule.py data/instances/brandimarte/mk01.txt data/results/bc_ppo_mk01_best_schedule.json
+```
+
+For AC fine-tuning (instead of PPO) pass `init_model` to `train_graph_actor_critic`:
+
+```powershell
+python -c "from rl.agents import train_graph_actor_critic; from fjsp.env import FJSPDispatchEnv; env = FJSPDispatchEnv.from_file('data/instances/brandimarte/mk01.txt'); agent, history = train_graph_actor_critic(env, episodes=500, lr=3e-5, hidden_dim=64, gnn_rounds=2, seed=0, init_model='data/results/imitation_mk01_best.pt'); print('best:', history[-1]['best_greedy_makespan'])"
+```
+
+BC + AC reaches greedy 49 on mk01 (see `data/results/bc_ac_mk01_results.md`).
+BC + PPO stays at 57 (PPO cannot break the BC initialization with the
+default sparse reward).
+
 Run large Brandimarte diagnostics:
 
 ```powershell
