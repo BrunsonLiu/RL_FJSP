@@ -1,9 +1,10 @@
 """Behavioral cloning pretraining for the HGT-FJSP agent.
 
 Cross-instance capable: takes a list of FJSPDispatchEnvs and collects
-demonstrations from ``choose_earliest_finish`` across all of them, then
-trains one HGT actor-critic net to imitate. The result is a single model
-that can be fine-tuned per-instance with AC / PPO.
+demonstrations from one or more dispatch rules (the "teachers") across
+all of them, then trains one HGT actor-critic net to imitate. The
+result is a single model that can be fine-tuned per-instance with
+AC / PPO.
 """
 from __future__ import annotations
 
@@ -12,13 +13,14 @@ import json
 from copy import deepcopy
 from pathlib import Path
 from random import Random
+from typing import Sequence
 
 import torch
 from torch import nn
 
 from fjsp.env import DispatchAction, FJSPDispatchEnv
 from fjsp.graph.operation_machine_graph import build_operation_machine_graph
-from fjsp.scheduler.dispatch_rules import choose_earliest_finish
+from fjsp.scheduler.dispatch_rules import get_rule
 from fjsp.scheduler.validator import ScheduledOperation
 from fjsp.utils.scaling import instance_time_scale
 from rl.agents.hgt_fjsp import HGTActorCriticAgent
@@ -30,7 +32,7 @@ def _snapshot_env(env: FJSPDispatchEnv) -> tuple:
         list(env.job_ready_time),
         list(env.machine_ready_time),
         int(env.remaining_operations),
-        list(env._schedule),
+        [ScheduledOperation(**vars(op)) for op in env._schedule],
     )
 
 
@@ -65,20 +67,28 @@ def collect_cross_instance_demonstrations(
     envs: list[FJSPDispatchEnv],
     *,
     rollouts_per_instance: int = 50,
+    teachers: Sequence[str] = ("earliest_finish",),
     seed: int = 0,
 ) -> list[tuple[int, tuple, int, int]]:
-    """Collect (instance_idx, state_snapshot, job_pos, machine_pos) from
-    ``choose_earliest_finish`` across all instances."""
+    """Collect (instance_idx, state_snapshot, job_pos, machine_pos) pairs
+    from each named dispatch rule. Each rule produces
+    ``rollouts_per_instance`` trajectories per instance.
+    """
+    rng = Random(seed)
+    rules = [get_rule(name) for name in teachers]
     out: list[tuple[int, tuple, int, int]] = []
     for inst_idx, env in enumerate(envs):
-        for _ in range(rollouts_per_instance):
-            env.reset()
-            while not env.done:
-                snap = _snapshot_env(env)
-                chosen = choose_earliest_finish(env)
-                jp, mp = _resolve_positions(env, chosen)
-                out.append((inst_idx, snap, jp, mp))
-                env.step(chosen)
+        for rule in rules:
+            for _ in range(rollouts_per_instance):
+                env.reset()
+                while not env.done:
+                    snap = _snapshot_env(env)
+                    chosen = rule(env)
+                    jp, mp = _resolve_positions(env, chosen)
+                    out.append((inst_idx, snap, jp, mp))
+                    env.step(chosen)
+        # Touch rng to keep teacher ordering deterministic across instances.
+        _ = rng.random()
     return out
 
 
@@ -87,6 +97,7 @@ def train_hgt_imitation(
     instance_paths: list[Path],
     *,
     rollouts_per_instance: int = 50,
+    teachers: Sequence[str] = ("earliest_finish",),
     epochs: int = 10,
     batch_size: int = 32,
     lr: float = 1e-3,
@@ -100,7 +111,7 @@ def train_hgt_imitation(
     use_instance_embed: bool = True,
 ) -> tuple[HGTActorCriticAgent, list[dict[str, float]]]:
     torch.manual_seed(seed)
-    num_known = len(envs) if use_instance_embed else 0
+    num_known = max(1, len(envs)) if use_instance_embed else 0
     agent = HGTActorCriticAgent.create(
         hidden_dim=hidden_dim,
         num_blocks=num_blocks,
@@ -112,17 +123,29 @@ def train_hgt_imitation(
     )
     optimizer = torch.optim.Adam(agent.net.parameters(), lr=lr)
 
-    print(f"[HGT-BC] Collecting {rollouts_per_instance} rollouts x {len(envs)} instances...")
-    demos = collect_cross_instance_demonstrations(envs, rollouts_per_instance=rollouts_per_instance, seed=seed)
+    print(
+        f"[HGT-BC] Collecting {rollouts_per_instance} rollouts x {len(envs)} instances x "
+        f"{len(teachers)} teachers..."
+    )
+    demos = collect_cross_instance_demonstrations(
+        envs, rollouts_per_instance=rollouts_per_instance, teachers=teachers, seed=seed
+    )
     print(f"[HGT-BC] Collected {len(demos)} (state, action) demonstrations.")
 
     n = len(demos)
     history: list[dict[str, float]] = []
     best_loss: float | None = None
     best_state: dict[str, torch.Tensor] | None = None
+    best_ie: dict[str, torch.Tensor] | None = None
+
+    instance_id_map: dict[str, int] = (
+        {p.stem: i for i, p in enumerate(instance_paths)} if use_instance_embed else {}
+    )
 
     def _instance_id_for_path(path: Path) -> int:
-        return abs(hash(path.stem)) % 10_000
+        if not use_instance_embed:
+            return 0
+        return instance_id_map.get(path.stem, 0)
 
     log_every = max(1, epochs // 10)
 
@@ -147,7 +170,6 @@ def train_hgt_imitation(
                 _restore_env(env, snap)
                 if use_instance_embed:
                     agent.instance_id = _instance_id_for_path(instance_paths[inst_idx])
-                # Forward pass to compute logits for this state.
                 graph = build_operation_machine_graph(env, device=device)
                 op_emb, mach_emb = agent.net.encode(graph)
                 if use_instance_embed and agent.instance_id is not None and agent.instance_embed is not None:
@@ -187,7 +209,6 @@ def train_hgt_imitation(
             if not job_logits_list:
                 continue
 
-            # Pad variable-length logits.
             def _pad(t_list: list[torch.Tensor]) -> torch.Tensor:
                 max_len = max(t.numel() for t in t_list)
                 padded = []
@@ -221,9 +242,19 @@ def train_hgt_imitation(
             best_loss = avg_loss
             best_state = deepcopy(agent.net.state_dict())
             best_ie = deepcopy(agent.instance_embed.state_dict()) if agent.instance_embed is not None else None
-        history.append({"epoch": float(epoch), "job_loss": avg_job_loss, "machine_loss": avg_machine_loss, "total_loss": avg_loss})
+        history.append(
+            {
+                "epoch": float(epoch),
+                "job_loss": avg_job_loss,
+                "machine_loss": avg_machine_loss,
+                "total_loss": avg_loss,
+            }
+        )
         if epoch == 1 or epoch == epochs or epoch % log_every == 0:
-            print(f"[HGT-BC] epoch {epoch:3d}/{epochs} | job_loss={avg_job_loss:.4f} machine_loss={avg_machine_loss:.4f}")
+            print(
+                f"[HGT-BC] epoch {epoch:3d}/{epochs} | job_loss={avg_job_loss:.4f} "
+                f"machine_loss={avg_machine_loss:.4f}"
+            )
 
     if best_state is not None:
         agent.net.load_state_dict(best_state)
@@ -235,8 +266,17 @@ def train_hgt_imitation(
 def main() -> None:
     _root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description="Train an HGT-FJSP policy with behavioral cloning.")
-    parser.add_argument("--instances", nargs="+", default=[str(_root / "data" / "instances" / "brandimarte" / f"mk{i:02d}.txt") for i in range(1, 11)])
-    parser.add_argument("--rollouts-per-instance", type=int, default=50)
+    parser.add_argument(
+        "--instances",
+        nargs="+",
+        default=[str(_root / "data" / "instances" / "brandimarte" / f"mk{i:02d}.txt") for i in range(1, 11)],
+    )
+    parser.add_argument("--rollouts-per-instance", type=int, default=20)
+    parser.add_argument(
+        "--teachers",
+        nargs="+",
+        default=["earliest_finish", "spt", "lpt", "mor", "lor", "shortest_start"],
+    )
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -247,7 +287,7 @@ def main() -> None:
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--no-instance-embed", action="store_true")
-    parser.add_argument("--model-out", default=str(Path(__file__).resolve().parents[1] / "data" / "results" / "hgt_bc_mk01_10.pt"))
+    parser.add_argument("--model-out", default=str(_root / "data" / "results" / "hgt_bc_mk01_10.pt"))
     args = parser.parse_args()
 
     instance_paths = [Path(p) for p in args.instances]
@@ -255,6 +295,7 @@ def main() -> None:
     agent, history = train_hgt_imitation(
         envs, instance_paths,
         rollouts_per_instance=args.rollouts_per_instance,
+        teachers=args.teachers,
         epochs=args.epochs,
         batch_size=args.batch_size,
         lr=args.lr,

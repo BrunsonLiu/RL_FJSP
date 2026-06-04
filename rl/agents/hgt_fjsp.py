@@ -268,28 +268,66 @@ class HGTActorCriticAgent:
         return result
 
     def save(self, path: str | Path) -> None:
+        cfg = self.net.encoder
+        # ``ffn_dim`` may be missing on the encoder if the agent was loaded
+        # from an older checkpoint that did not persist it. Recover from the
+        # first block's ffn weight in that case.
+        ffn_dim = getattr(cfg, "ffn_dim", None)
+        if ffn_dim is None:
+            w = self.net.state_dict().get("encoder.op_blocks.0.ffn.0.weight")
+            if w is not None:
+                ffn_dim = int(w.shape[0])
+            else:
+                ffn_dim = 512
+        dropout = getattr(cfg, "dropout", 0.1)
         payload = {
             "model_state": self.net.state_dict(),
             "instance_embed_state": self.instance_embed.state_dict() if self.instance_embed is not None else None,
             "config": {
-                "op_feature_dim": self.net.encoder.op_input[0].in_features,
-                "machine_feature_dim": self.net.encoder.machine_input[0].in_features,
-                "global_feature_dim": self.net.critic.head[0].in_features - self.net.encoder.op_input[0].out_features,
-                "hidden_dim": self.net.encoder.op_input[0].out_features,
-                "num_blocks": self.net.encoder.num_blocks,
-                "num_heads": self.net.encoder.num_heads,
+                "op_feature_dim": cfg.op_input[0].in_features,
+                "machine_feature_dim": cfg.machine_input[0].in_features,
+                "global_feature_dim": self.net.critic.head[0].in_features - cfg.op_input[0].out_features,
+                "hidden_dim": cfg.op_input[0].out_features,
+                "num_blocks": cfg.num_blocks,
+                "num_heads": cfg.num_heads,
+                "ffn_dim": ffn_dim,
+                "dropout": dropout,
             },
         }
         torch.save(payload, path)
 
     @classmethod
-    def load(cls, path: str | Path, *, hidden_dim: int = 128, device: str = "cpu") -> "HGTActorCriticAgent":
+    def load(
+        cls,
+        path: str | Path,
+        *,
+        hidden_dim: int = 128,
+        num_blocks: int = 4,
+        num_heads: int = 8,
+        ffn_dim: int = 512,
+        dropout: float = 0.1,
+        device: str = "cpu",
+    ) -> "HGTActorCriticAgent":
         payload = torch.load(path, map_location=device, weights_only=False)
         cfg = payload.get("config", {})
+        # Backwards-compat: older checkpoints do not store ffn_dim/dropout.
+        # Infer them from the saved state_dict when missing.
+        if "ffn_dim" not in cfg:
+            for k, v in payload["model_state"].items():
+                if k.endswith("encoder.op_blocks.0.ffn.0.weight"):
+                    cfg["ffn_dim"] = int(v.shape[0])
+                    break
+        if "dropout" not in cfg:
+            cfg["dropout"] = dropout
         agent = cls.create(
             hidden_dim=cfg.get("hidden_dim", hidden_dim),
-            num_blocks=cfg.get("num_blocks", 4),
-            num_heads=cfg.get("num_heads", 8),
+            num_blocks=cfg.get("num_blocks", num_blocks),
+            num_heads=cfg.get("num_heads", num_heads),
+            ffn_dim=cfg.get("ffn_dim", ffn_dim),
+            dropout=cfg.get("dropout", dropout),
+            op_feature_dim=cfg.get("op_feature_dim"),
+            machine_feature_dim=cfg.get("machine_feature_dim"),
+            global_feature_dim=cfg.get("global_feature_dim"),
             device=device,
         )
         agent.net.load_state_dict(payload["model_state"])
