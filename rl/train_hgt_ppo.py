@@ -279,7 +279,7 @@ def train_hgt_ppo(
             K_epochs=K_epochs, minibatch_size=minibatch_size,
             value_coef=value_coef, entropy_coef=entropy_coef,
         )
-        if episode == 1 or episode == episodes or episode % max(1, episodes // 10) == 0:
+        if episode == 1 or episode == episodes or episode % max(1, episodes // 20) == 0:
             greedy_result = agent.rollout(env, greedy=True)
             if best_makespan is None or greedy_result.makespan < best_makespan:
                 best_makespan = greedy_result.makespan
