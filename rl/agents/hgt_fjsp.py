@@ -127,59 +127,70 @@ class HGTActorCriticAgent:
     ) -> tuple[DispatchAction, torch.Tensor, torch.Tensor, torch.Tensor]:
         if rng is None:
             rng = Random()
-        graph, op_emb, mach_emb = self.encode(env)
-        next_indices = list(graph.next_op_indices)
-        if not next_indices:
-            raise RuntimeError("No schedulable operations remain.")
-        cand = torch.tensor(next_indices, dtype=torch.long, device=self.device)
-        job_logits = self.net.score_jobs(op_emb, cand)
-        if greedy:
-            job_pos = int(torch.argmax(job_logits).item())
-        else:
-            masked = job_logits.masked_fill(torch.isinf(job_logits), float("-inf"))
-            probs = torch.softmax(masked, dim=-1)
-            job_pos = int(torch.multinomial(probs, num_samples=1, replacement=False).item())
+        # CRITICAL: switch to eval mode for action selection / value / log-prob
+        # computation. Otherwise dropout=0.1 randomly masks 10% of features on
+        # every forward, making greedy rollouts stochastic and breaking PPO
+        # updates. The training script flips back to ``train()`` before any
+        # gradient step.
+        was_training = self.net.training
+        self.net.eval()
+        try:
+            graph, op_emb, mach_emb = self.encode(env)
+            next_indices = list(graph.next_op_indices)
+            if not next_indices:
+                raise RuntimeError("No schedulable operations remain.")
+            cand = torch.tensor(next_indices, dtype=torch.long, device=self.device)
+            job_logits = self.net.score_jobs(op_emb, cand)
+            if greedy:
+                job_pos = int(torch.argmax(job_logits).item())
+            else:
+                masked = job_logits.masked_fill(torch.isinf(job_logits), float("-inf"))
+                probs = torch.softmax(masked, dim=-1)
+                job_pos = int(torch.multinomial(probs, num_samples=1, replacement=False).item())
 
-        target_op_idx = next_indices[job_pos]
-        target_op_ref = graph.operation_refs[target_op_idx]
-        machine_actions = [a for a in env.available_actions() if a.job == target_op_ref.job]
-        if not machine_actions:
-            raise RuntimeError("No machine actions for chosen job.")
-        machine_indices = torch.tensor(
-            [a.machine for a in machine_actions], dtype=torch.long, device=self.device
-        )
-        durations = torch.tensor(
-            [
-                next(
-                    option.duration
-                    for option in env.instance.jobs[a.job].operations[env.job_next_op[a.job]].options
-                    if option.machine == a.machine
-                )
-                / float(instance_time_scale(env))
-                for a in machine_actions
-            ],
-            dtype=torch.float32,
-            device=self.device,
-        )
-        machine_logits = self.net.score_machines(
-            op_emb[target_op_idx], mach_emb, machine_indices, durations
-        )
-        if greedy:
-            machine_pos = int(torch.argmax(machine_logits).item())
-        else:
-            masked_m = machine_logits.masked_fill(torch.isinf(machine_logits), float("-inf"))
-            probs_m = torch.softmax(masked_m, dim=-1)
-            machine_pos = int(torch.multinomial(probs_m, num_samples=1, replacement=False).item())
+            target_op_idx = next_indices[job_pos]
+            target_op_ref = graph.operation_refs[target_op_idx]
+            machine_actions = [a for a in env.available_actions() if a.job == target_op_ref.job]
+            if not machine_actions:
+                raise RuntimeError("No machine actions for chosen job.")
+            machine_indices = torch.tensor(
+                [a.machine for a in machine_actions], dtype=torch.long, device=self.device
+            )
+            durations = torch.tensor(
+                [
+                    next(
+                        option.duration
+                        for option in env.instance.jobs[a.job].operations[env.job_next_op[a.job]].options
+                        if option.machine == a.machine
+                    )
+                    / float(instance_time_scale(env))
+                    for a in machine_actions
+                ],
+                dtype=torch.float32,
+                device=self.device,
+            )
+            machine_logits = self.net.score_machines(
+                op_emb[target_op_idx], mach_emb, machine_indices, durations
+            )
+            if greedy:
+                machine_pos = int(torch.argmax(machine_logits).item())
+            else:
+                masked_m = machine_logits.masked_fill(torch.isinf(machine_logits), float("-inf"))
+                probs_m = torch.softmax(masked_m, dim=-1)
+                machine_pos = int(torch.multinomial(probs_m, num_samples=1, replacement=False).item())
 
-        action = machine_actions[machine_pos]
-        # log prob + entropy (job)
-        log_prob_j = torch.log_softmax(job_logits, dim=-1)[job_pos]
-        entropy_j = -(torch.softmax(job_logits, dim=-1) * torch.log_softmax(job_logits, dim=-1)).sum()
-        log_prob_m = torch.log_softmax(machine_logits, dim=-1)[machine_pos]
-        entropy_m = -(torch.softmax(machine_logits, dim=-1) * torch.log_softmax(machine_logits, dim=-1)).sum()
-        log_prob = log_prob_j + log_prob_m
-        entropy = entropy_j + entropy_m
-        value = self.net.value(graph, op_emb, mach_emb)
+            action = machine_actions[machine_pos]
+            # log prob + entropy (job)
+            log_prob_j = torch.log_softmax(job_logits, dim=-1)[job_pos]
+            entropy_j = -(torch.softmax(job_logits, dim=-1) * torch.log_softmax(job_logits, dim=-1)).sum()
+            log_prob_m = torch.log_softmax(machine_logits, dim=-1)[machine_pos]
+            entropy_m = -(torch.softmax(machine_logits, dim=-1) * torch.log_softmax(machine_logits, dim=-1)).sum()
+            log_prob = log_prob_j + log_prob_m
+            entropy = entropy_j + entropy_m
+            value = self.net.value(graph, op_emb, mach_emb)
+        finally:
+            if was_training:
+                self.net.train()
         return action, log_prob, value, entropy
 
     def evaluate_action(
