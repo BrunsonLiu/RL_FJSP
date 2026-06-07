@@ -16,7 +16,8 @@ from ortools.sat.python import cp_model
 from fjsp.parser.fjs_parser import parse_fjs
 
 
-def solve_makespan(instance_path: str | Path, time_limit_s: float = 30.0) -> int | None:
+def solve_makespan(instance_path: str | Path, time_limit_s: float = 30.0) -> tuple[int, bool] | None:
+    """Returns (makespan, is_optimal) or None if no solution found."""
     instance = parse_fjs(instance_path)
     model = cp_model.CpModel()
 
@@ -102,7 +103,8 @@ def solve_makespan(instance_path: str | Path, time_limit_s: float = 30.0) -> int
     solver.parameters.max_time_in_seconds = time_limit_s
     status = solver.Solve(model)
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return int(solver.Value(makespan))
+        is_optimal = status == cp_model.OPTIMAL
+        return int(solver.Value(makespan)), is_optimal
     return None
 
 
@@ -118,7 +120,9 @@ def main() -> None:
     if result is None:
         print(f"NO_SOLUTION: {args.instance} ({elapsed:.2f}s)", file=sys.stderr)
         sys.exit(1)
-    print(f"OPTIMAL: {args.instance} makespan={result} ({elapsed:.2f}s)")
+    makespan, is_optimal = result
+    status_str = "OPTIMAL" if is_optimal else "FEASIBLE (time limit)"
+    print(f"{status_str}: {args.instance} makespan={makespan} ({elapsed:.2f}s)")
 
 
 if __name__ == "__main__":
