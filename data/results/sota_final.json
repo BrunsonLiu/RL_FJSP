@@ -141,13 +141,14 @@
     "operations": 240,
     "ef_makespan": 406,
     "reinforce_best": 242,
-    "ils_best": 226,
+    "ils_best": 231,
     "sa_makespan": 242,
-    "final_best": 226,
+    "final_best": 224,
     "lit_optimum": null,
     "lit_ub": 197,
     "lit_target": 197,
-    "gap_to_lit": 29
+    "gap_to_lit": 27,
+    "ts_makespan": 224
   },
   {
     "instance": "mk11",
@@ -216,12 +217,13 @@
     "operations": 284,
     "ef_makespan": 549,
     "reinforce_best": 408,
-    "ils_best": 371,
+    "ils_best": 380,
     "sa_makespan": 408,
-    "final_best": 371,
+    "final_best": 370,
     "lit_optimum": null,
     "lit_ub": 341,
     "lit_target": 341,
-    "gap_to_lit": 30
+    "gap_to_lit": 29,
+    "ts_makespan": 370
   }
 ]

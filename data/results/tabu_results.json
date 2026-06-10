@@ -1,0 +1,29 @@
+[
+  {
+    "instance": "mk10",
+    "lit_target": 197,
+    "rl_best": 242,
+    "ils_ms": 231,
+    "ts_ms": 224,
+    "final_best": 224,
+    "gap_to_lit": 27
+  },
+  {
+    "instance": "mk15",
+    "lit_target": 341,
+    "rl_best": 408,
+    "ils_ms": 380,
+    "ts_ms": 370,
+    "final_best": 370,
+    "gap_to_lit": 29
+  },
+  {
+    "instance": "mk09",
+    "lit_target": 307,
+    "rl_best": 339,
+    "ils_ms": 338,
+    "ts_ms": 332,
+    "final_best": 332,
+    "gap_to_lit": 25
+  }
+]

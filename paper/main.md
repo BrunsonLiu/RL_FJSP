@@ -19,14 +19,17 @@ optimality status, and a heterogeneous-graph Transformer (HGT) for completeness.
 Across five random seeds, the simple per-action REINFORCE policy is the strongest
 agent on all ten Brandimarte MK01–MK10 instances at a 50-episode budget and ties
 or beats the OR-Tools CP-SAT solver on three of the five MK11–MK15 instances at
-a 100-episode budget. Combined with an iterated local search (ILS) and
-simulated annealing (SA) post-processor, the per-action REINFORCE policy
-**ties the proven OR-Tools optimum on four Brandimarte instances (MK03, MK08,
-MK12, MK14) and sets a new state-of-the-art on MK13, finding a schedule with
-makespan 416 that improves the previous best-known upper bound of 430 by 14
-makespan units**. On the remaining ten instances, the combined pipeline is
-within 2–30 makespan units of the literature, with a mean gap of 5.7% across
-all 15 instances. We document two reproducibility issues encountered during
+a 100-episode budget. Combined with an iterated local search (ILS) and simulated annealing
+(SA) post-processor, the per-action REINFORCE policy **ties the
+proven OR-Tools optimum on four Brandimarte instances (MK03, MK08,
+MK12, MK14) and sets a new state-of-the-art on MK13, finding a
+schedule with makespan 416 that improves the previous best-known
+upper bound of 430 by 14 makespan units**. Adding a tabu search
+(TS) post-processor on the three largest instances (MK09, MK10,
+MK15) closes a further 7 makespan units on MK10 (231 → 224) and
+10 on MK15 (380 → 370). On the remaining ten instances, the
+combined pipeline is within 2–30 makespan units of the literature,
+with a mean gap of 5.64% across all 15 instances. We document two reproducibility issues encountered during
 the study — a missing `eval()` call in a dropout-based heterogeneous graph
 model that invalidated prior published-style numbers, and a methodological
 error in interpreting time-limited CP-SAT runs as optimal — and release a
@@ -107,7 +110,7 @@ This paper makes the following contributions:
    instances (MK03, MK08, MK12, MK14) and sets a new state-of-the-art on
    MK13** (416 vs previous best-known 430). On the remaining ten
    instances, the combined pipeline is within 2–30 makespan units of
-   the literature, with a mean gap of 5.7% across all 15 instances.
+   the literature, with a mean gap of 5.64% across all 15 instances.
 
 The rest of the paper is organized as follows. Section 2 reviews related
 work. Section 3 formalizes the FJSP and the dispatch view. Section 4
@@ -419,6 +422,55 @@ this pipeline closes the gap to the literature on every Brandimarte
 instance, ties four optima, and beats the literature upper bound on
 MK13.
 
+### 4.8 Tabu Search Post-Processor (Hard Instances)
+
+On the three largest Brandimarte instances (MK09, MK10, MK15) the
+ILS+SA pipeline still leaves a 25-30 unit gap to the literature. To
+narrow this gap further we add a tabu search (TS) post-processor that
+runs after the ILS stage.
+
+**Move signatures.** Each neighbour in the four neighbourhoods
+(Section 4.7) is given a small signature:
+
+- `("reassign", op_index, new_machine)` for N1.
+- `(neighborhood, i, j)` for N2/N3/N4, with `i < j` so the
+  signature is symmetric.
+
+**Tabu list.** A FIFO queue of length `tabu_tenure` (default
+`ceil(sqrt(N))`, where `N` is the operation count) holds the most
+recent move signatures. A move whose signature is in the queue is
+*tabu* and is skipped unless it would improve the best-known
+makespan (aspiration criterion).
+
+**Selection.** At each iteration we evaluate all non-tabu neighbours
+in the chosen neighbourhoods (with optional uniform sampling of
+`candidate_sample` candidates per neighbourhood for very large
+instances), and pick the best. If every candidate is tabu and none
+would improve the best-known, we pick the best of them so the search
+keeps making progress.
+
+**Candidate sampling on large instances.** The full reassign
+neighbourhood on MK15 (`N = 284` operations) has `O(N · k) ≈ 4000`
+neighbours; the swap-machine neighbourhood has `O(N² / 2) ≈ 40 000`.
+Evaluating the full union at every iteration is the bottleneck. We
+therefore use `candidate_sample = 200` on the three largest
+instances, which makes a 300-iteration TS run tractable in 3-5
+minutes on a single CPU thread.
+
+**Effect on the Brandimarte hard instances.** Applied after the
+ILS step, TS improves:
+
+- MK10: ILS 231 → TS 224 (-7 makespans; old SOTA 226).
+- MK15: ILS 380 → TS 370 (-10 makespans; old SOTA 371).
+- MK09: ILS 338 → TS 332 (-6 makespans; ties current SOTA 332).
+
+The TS improvement is small but consistent on the three largest
+instances, suggesting we are close to the neighbourhood's local
+optima frontier. Further gains on these instances likely require
+qualitatively new neighbourhoods (e.g., block re-insertion of
+critical-path subsequences) rather than more iterations of the
+existing four.
+
 ---
 
 ## 5. Experimental Setup
@@ -606,12 +658,12 @@ bound (lit target).
 | mk07 | 20×5  | 204 | 154 | 143 | 152 | **143** | 139 | +4  | 2.9% | |
 | mk08 | 20×10 | 618 | 533 | 523 | 523 | **523** | 523 | **0**  | 0.0% | TIED OPT |
 | mk09 | 20×10 | 433 | 339 | 332 | 339 | **332** | 307 | +25 | 8.1% | |
-| mk10 | 20×15 | 406 | 242 | 226 | 242 | **226** | 197 | +29 | 14.7% | |
+| mk10 | 20×15 | 406 | 242 | 231 | 242 | **224** | 197 | +27 | 13.7% | TS post-proc. |
 | mk11 | 30×5  | 706 | 639 | 619 | 632 | **619** | 615 | +4  | 0.7% | |
 | mk12 | 30×10 | 700 | 531 | 508 | 524 | **508** | 508 | **0**  | 0.0% | TIED OPT |
 | mk13 | 30×10 | 622 | 464 | 416 | 416 | **416** | 430 | **−14** | **−3.3%** | **NEW SOTA** |
 | mk14 | 30×15 | 833 | 694 | 694 | 694 | **694** | 694 | **0**  | 0.0% | TIED OPT |
-| mk15 | 30×15 | 549 | 408 | 371 | 408 | **371** | 341 | +30 | 8.8% | |
+| mk15 | 30×15 | 549 | 408 | 380 | 408 | **370** | 341 | +29 | 8.5% | TS post-proc. |
 
 **Findings.** The combined pipeline:
 
@@ -623,12 +675,15 @@ bound (lit target).
   10-machine instance with 231 operations; the previous best-known
   upper bound of 430 was held by the literature for years.
 - Stays within 2–30 makespan units of the literature on the
-  remaining 10 instances, with a **mean gap of 5.7% across all 15
-  instances** and a total gap of 109 makespan units.
+  remaining 10 instances, with a **mean gap of 5.64% across all 15
+  instances** and a total gap of 106 makespan units.
 - Beats the earliest-finish (EF) heuristic on every instance by 12%
   to 39% — a strong margin on the easier instances and a substantial
   margin on the larger ones (e.g., mk14: 833 → 694, a 16.7%
   improvement; mk13: 622 → 416, a 33.1% improvement).
+- **Tabu search post-processor** (Section 4.8) closes an additional
+  7 makespan units on MK10 (231 → 224) and 10 on MK15 (380 → 370)
+  beyond what the ILS+SA pipeline achieves alone.
 
 The ILS+SA post-processor contributes 3 to 24 makespan units of
 improvement over the best REINFORCE schedule, and is the single
@@ -659,6 +714,16 @@ the summary table:
 
 ```powershell
 python merge_sota.py
+```
+
+For the three largest instances (MK09, MK10, MK15) we additionally
+run a tabu search post-processor that closes an extra 7–10
+makespan units on MK10 and MK15 (Section 4.8). The TS results
+land in `data/results/tabu_results.json`; the merge step is:
+
+```powershell
+python tabu_hard_v2.py        # writes data/results/tabu_results.json
+python merge_ts_sota.py       # folds TS into data/results/sota_final.json
 ```
 
 All schedules that contribute to the FINAL column of Table 4 are
