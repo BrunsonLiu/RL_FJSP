@@ -9,6 +9,7 @@ from fjsp.scheduler.local_search import (
     random_perturb,
     random_schedule,
     simulated_annealing,
+    tabu_search,
 )
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "random_perturb",
     "random_schedule",
     "simulated_annealing",
+    "tabu_search",
 ]
 

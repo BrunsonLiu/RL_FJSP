@@ -21,7 +21,7 @@ literature best-known upper bounds on Brandimarte MK04, MK09, MK15 by
 """
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import replace
 from typing import Iterable
 
@@ -710,4 +710,163 @@ def simulated_annealing(
                     best_makespan = new_makespan
             it += 1
         temperature *= cooling_rate
+    return _recompute(instance, best_assignments), best_makespan
+
+
+def _move_signature(
+    current_assignments: list[tuple[int, int, int]],
+    neighbor_assignments: list[tuple[int, int, int]],
+    neighborhood: str,
+) -> tuple:
+    """Compute a move signature (the diff between two assignments).
+
+    For N1 (reassign) the signature is (op_index, new_machine) where
+    op_index is the index in the assignments list. For N2/N3/N4 the
+    signature is the sorted pair of indices that were swapped. This is
+    symmetric so swapping (i, j) and (j, i) are the same move.
+    """
+    if neighborhood == "reassign":
+        for i, (cur, nxt) in enumerate(zip(current_assignments, neighbor_assignments)):
+            if cur != nxt:
+                # cur[0] is job, cur[1] is op, cur[2] is machine
+                # nxt[2] is the new machine
+                return ("reassign", i, nxt[2])
+        return ("reassign", -1, -1)  # no change
+    # For swap-based neighborhoods, find the two indices whose values differ
+    diffs = []
+    for i, (cur, nxt) in enumerate(zip(current_assignments, neighbor_assignments)):
+        if cur != nxt:
+            diffs.append(i)
+            if len(diffs) == 2:
+                break
+    if len(diffs) == 2:
+        return (neighborhood, min(diffs), max(diffs))
+    return (neighborhood, -1, -1)
+
+
+def tabu_search(
+    instance: FJSPInstance,
+    schedule: list[ScheduledOperation],
+    *,
+    max_iterations: int = 500,
+    tabu_tenure: int | None = None,
+    neighborhoods: tuple[str, ...] = ("reassign", "swap_machine", "swap_order"),
+    seed: int = 0,
+    candidate_sample: int | None = None,
+) -> tuple[list[ScheduledOperation], int]:
+    """Tabu search on the FJSP schedule.
+
+    Each move is represented by a small tuple that uniquely identifies it.
+    The tabu list is a FIFO queue of move signatures with a fixed tenure.
+    A move is *tabu* if its signature is in the recent history; tabu moves
+    are skipped unless they would improve the best-known makespan
+    (aspiration criterion). We always pick the best non-tabu neighbour in
+    the chosen neighbourhoods; if all candidates are tabu we pick the
+    least-bad one to keep making progress.
+
+    Parameters
+    ----------
+    instance
+        The FJSP instance.
+    schedule
+        A legal schedule. The list of (job, op, machine) assignments is
+        extracted and used as the search state.
+    max_iterations
+        Maximum number of TS iterations. Each iteration evaluates all
+        neighbours in the chosen neighbourhoods, picks the best non-tabu
+        move, and advances the search.
+    tabu_tenure
+        How long a move stays tabu. Defaults to ``ceil(sqrt(N))`` where
+        ``N`` is the number of operations.
+    neighborhoods
+        Which neighbourhoods to use. Choose from "reassign", "swap_machine",
+        "swap_order", "swap_order_across".
+    seed
+        Random seed (only used when ``candidate_sample`` is set).
+    candidate_sample
+        If set, sample at most this many candidates per neighbourhood per
+        iteration (uniformly at random). Useful for very large instances
+        where full neighbourhood evaluation is too slow.
+
+    Returns
+    -------
+    new_schedule, new_makespan
+        The best schedule found and its makespan.
+    """
+    import random
+    import math
+    rng = random.Random(seed)
+
+    assignments = _assignments(schedule)
+    best_assignments = list(assignments)
+    best_makespan = _makespan(instance, assignments)
+    current_assignments = list(assignments)
+    current_makespan = best_makespan
+
+    n_ops = len(assignments)
+    if tabu_tenure is None:
+        tabu_tenure = max(5, int(math.sqrt(n_ops)))
+
+    generator_fns = {
+        "reassign": _neighbors_reassign,
+        "swap_machine": _neighbors_swap_machines,
+        "swap_order": _neighbors_swap_same_machine,
+        "swap_order_across": _neighbors_swap_order_across_machines,
+    }
+    for name in neighborhoods:
+        if name not in generator_fns:
+            raise KeyError(f"Unknown neighborhood {name!r}.")
+
+    # Tabu list as a FIFO queue of move signatures.
+    tabu_queue: deque = deque(maxlen=tabu_tenure)
+    tabu_set: set = set()
+
+    for it in range(max_iterations):
+        # Generate all neighbours with their makespans and move signatures.
+        candidates: list[tuple[int, list, tuple]] = []
+        for name in neighborhoods:
+            neighbors = generator_fns[name](instance, current_assignments)
+            if candidate_sample is not None and len(neighbors) > candidate_sample:
+                neighbors = rng.sample(neighbors, candidate_sample)
+            for neighbor in neighbors:
+                try:
+                    ms = _makespan(instance, neighbor)
+                except ValueError:
+                    continue
+                sig = _move_signature(current_assignments, neighbor, name)
+                candidates.append((ms, neighbor, sig))
+
+        if not candidates:
+            break
+
+        # Sort by makespan ascending (best first).
+        candidates.sort(key=lambda x: x[0])
+
+        # Pick the best non-tabu move; if all tabu, pick the best (aspiration
+        # is implicit because we accept any tabu move that improves the
+        # best, but we also break ties by best makespan).
+        chosen = None
+        for ms, neighbor, sig in candidates:
+            if sig not in tabu_set or ms < best_makespan:
+                chosen = (ms, neighbor, sig)
+                break
+        if chosen is None:
+            # All candidates are tabu and none improves best -> pick the best
+            chosen = candidates[0]
+
+        new_makespan, new_assignments, sig = chosen
+        current_assignments = new_assignments
+        current_makespan = new_makespan
+
+        # Update tabu list (deque with maxlen auto-discards oldest).
+        if len(tabu_queue) == tabu_tenure:
+            tabu_set.discard(tabu_queue[0])
+        tabu_queue.append(sig)
+        tabu_set.add(sig)
+
+        # Update best
+        if current_makespan < best_makespan:
+            best_makespan = current_makespan
+            best_assignments = list(current_assignments)
+
     return _recompute(instance, best_assignments), best_makespan
