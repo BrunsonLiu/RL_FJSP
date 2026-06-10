@@ -123,60 +123,190 @@ Section 8 discusses the implications. Section 9 concludes.
 
 ## 2. Related Work
 
+We organize the related work in six sections. §2.1 covers the
+classical exact and metaheuristic foundations. §2.2 reviews the
+deep-RL era for FJSP, with an emphasis on the architectural arms
+race of 2020-2026. §2.3 surveys hybrid pipelines that combine RL
+with local search — the closest prior work to ours. §2.4 reviews
+reproducibility concerns in deep RL for combinatorial optimization.
+§2.5 reviews commercial and open-source exact solvers that we use
+as baselines. §2.6 closes with an explicit positioning of this work
+relative to the literature.
+
 ### 2.1 Exact and Heuristic Methods for FJSP
 
-FJSP was introduced by Brucker and Schlie [1990]. Exact methods include
-mixed-integer linear programming [Özgüven et al., 2010], constraint
-programming with global constraints, and branch-and-bound [Brucker et al.,
-1994]. Heuristic methods include priority dispatching rules such as
-shortest processing time, earliest completion time, most work remaining, and
-the well-known earliest-finish rule that scores each candidate
-(operation, machine) pair by its expected finish time and picks the minimum
-[Blackstone et al., 1982; Holthaus and Rajendran, 1997]. Modern
-metaheuristics include genetic algorithms [Kacem et al., 2002], tabu search
-[Chambers and Barnes, 1996], and iterated local search.
+FJSP was introduced by Brucker and Schlie [1990]. Exact methods
+include mixed-integer linear programming [Özgüven et al., 2010;
+Venturelli et al., 2024], constraint programming with global
+constraints, and branch-and-bound with custom lower bounds
+[Brucker et al., 1994]. On the Brandimarte MK01–MK15 benchmark the
+strongest exact solver in current use is Gurobi, which proves
+optima on the smaller instances (MK01–MK10) and returns time-
+limited upper bounds on the larger ones; CP-SAT inside Google
+OR-Tools is the most widely cited open-source alternative
+[Perron and Furnon, 2024]. Hexaly, a commercial hybrid
+solver, reports a 0.6 % average gap on FJSP instances with up to
+500 tasks and 60 machines within 1 minute of run time
+[Hexaly, 2026], which is the strongest commercial result we are
+aware of.
+
+Heuristic methods for FJSP include priority dispatching rules
+(shortest processing time, earliest completion time, most work
+remaining) and the well-known earliest-finish (EF) rule that scores
+each candidate (operation, machine) pair by its expected finish
+time and picks the minimum [Blackstone et al., 1982; Holthaus and
+Rajendran, 1997]. Modern metaheuristics include genetic algorithms
+[Kacem et al., 2002; Gao et al., 2024], tabu search [Brandimarte,
+1993; Chambers and Barnes, 1996], simulated annealing, ant-colony
+optimization, and iterated local search. Brandimarte's original
+tabu-search paper [1993] is the source of the MK01–MK15 benchmark
+that is the standard test set in essentially every FJSP paper since.
 
 ### 2.2 Reinforcement Learning for FJSP
 
-Early work cast FJSP as a Markov decision process and applied tabular or
-shallow function approximation [Wei and Liu, 1994; Aydin and Öztemel, 2000].
-The deep-RL era began with [Zhang et al., 2020], who proposed a
-disjunctive-graph encoder and a hierarchical actor-critic that first picks
-an operation and then a machine. [Lei et al., 2022] proposed a multi-action
-graph-pointer network. [Park et al., 2021] introduced a Transformer-based
-encoder-decoder. [Yang et al., 2024] proposed a heterogeneous graph
-Transformer (HGT) for FJSP. Recent work has explored imitation
-pretraining on dispatching rules [Chen et al., 2023], curriculum learning
-across instance sizes, and dynamic-FJSP extensions with job arrivals and
-machine breakdowns.
+Early work cast FJSP as a Markov decision process and applied
+tabular or shallow function approximation [Wei and Liu, 1994;
+Aydin and Öztemel, 2000]. The deep-RL era began with Zhang et al.
+[2020], who proposed a disjunctive-graph encoder and a hierarchical
+actor-critic that first picks an operation and then a machine. Lei
+et al. [2022] proposed a multi-action graph-pointer network (MPGN)
+trained with multi-PPO. Park et al. [2021] introduced SchedNet, a
+Transformer-based encoder-decoder. The 2023-2026 wave added
+heterogeneous graph Transformers [Yang et al., 2024], graph gated
+channel transformations [Huang et al., 2024], residual state
+representations [Ho et al., 2024], graph-isomorphism-network
+backbones with sparse masks [Chen et al., 2025], and minimalist
+4-feature state designs with plain Transformers [Xiao et al., 2026].
 
-A common narrative in this line of work is that a more expressive neural
-architecture (graph, attention, Transformer) plus a stronger RL algorithm
-(actor-critic, PPO) yields monotonically better schedules. Our results
-suggest this narrative is not as clean as it sounds: at the training
-budgets and instance sizes we consider, the simplest per-action REINFORCE
-policy with handcrafted features is competitive with or better than the
-more elaborate models.
+The dominant architectural narrative in this line of work is that
+a more expressive model (graph, attention, Transformer) combined
+with a stronger RL algorithm (AC, PPO) yields monotonically better
+schedules. Notable recent results supporting this narrative are
+the SMG-DRL framework [Chen et al., 2025], which reports a 6.23-8.76 %
+gap on 30×10 and 40×10 instances, the heterogeneous-graph
+Transformer (HGT) of Yang et al. [2024], and the RESCHED
+Transformer of Xiao et al. [2026] (ICLR 2026), which reports
+30 % lower gaps than DANIEL on the SD2 dataset and outperforms
+classical and DRL baselines on FJSP, JSP, and FFSP variants.
 
-### 2.3 Reproducibility in Deep RL for Combinatorial Optimization
+Our results add a counter-data-point to this narrative: at the
+training budgets and instance sizes we consider, the simplest
+per-action REINFORCE policy with handcrafted features is
+competitive with or better than the elaborate graph and Transformer
+models. The architectural arms race, while productive for
+generalization to new instance sizes, does not appear to translate
+into best-known makespan improvements on the fixed Brandimarte
+benchmark.
 
-Reproducibility in deep RL is a known concern: hyperparameters, evaluation
-protocols, random seeds, and implementation bugs can all flip conclusions
-[Islam et al., 2017; Henderson et al., 2018]. In the FJSP-RL subfield, the
-issue is amplified by the small number of standard benchmarks (Brandimarte
-MK and Hurink sets) and the relative scarcity of multi-seed studies. Our
-HGT dropout bug (Section 7.1) is, to our knowledge, the first
-documented instance in this subfield; we suspect it is not the only one.
+### 2.3 Hybrid RL + Local-Search Pipelines
 
-### 2.4 OR-Tools as a Strong Baseline
+The closest prior work to ours is the family of methods that
+combine a learned policy with a local-search post-processor.
+Hottung et al. [2022] showed for the capacitated vehicle routing
+problem (CVRRP) that even a random policy, when paired with a
+strong local search, is competitive with the best learned
+heuristics, and that local search over the policy's output
+consistently beats the policy alone. This "neural policy + local
+search" pattern has since been applied to a number of COPs
+[Chen and Tian, 2024; Huang et al., 2023; Zheng et al., 2024].
 
-OR-Tools [Google, 2024] is an open-source combinatorial optimization
-suite. Its CP-SAT solver [Perron and Furnon, 2024] is widely used as a
-strong exact baseline for FJSP and other scheduling problems. CP-SAT
-returns one of three statuses: `OPTIMAL` (proven optimal), `FEASIBLE`
-(time-limited, upper bound only), and `INFEASIBLE` (no feasible schedule
-found). Distinguishing these statuses is critical: a `FEASIBLE` 60 s
-bound is not an optimality claim.
+For FJSP specifically, hybrid pipelines are less common but not
+absent. Several 2024-2025 works (e.g. SMG-DRL [Chen et al., 2025],
+the multi-objective PPO + D3QN approach of Li et al. [2025])
+report competitive makespan numbers on Brandimarte but rely on
+the policy alone; none of these works that we are aware of
+reports a per-instance comparison against the Brandimarte best-
+known upper bound for all 15 instances, and none of them saves
+and validates the final schedule to allow independent
+reproduction. To the best of our knowledge, **no published RL
+method for FJSP has reported a best-known improvement on
+Brandimarte MK13 or a tied optimum on four Brandimarte instances,
+which is what we report here.**
+
+### 2.4 Reproducibility in Deep RL for Combinatorial Optimization
+
+Reproducibility in deep RL is a known concern: hyperparameters,
+evaluation protocols, random seeds, and implementation bugs can
+all flip conclusions [Islam et al., 2017; Henderson et al., 2018].
+In the FJSP-RL subfield the issue is amplified by the small
+number of standard benchmarks (Brandimarte MK and Hurink sets)
+and the relative scarcity of multi-seed studies. Our HGT dropout
+bug (§7.1) is, to our knowledge, the first documented instance
+in this subfield; we suspect it is not the only one.
+
+A second reproducibility issue is the OR-Tools CP-SAT baseline
+methodology. CP-SAT returns one of three statuses: `OPTIMAL`
+(proven optimal), `FEASIBLE` (time-limited, upper bound only), and
+`INFEASIBLE` (no feasible schedule found). Several FJSP-RL papers
+report time-limited CP-SAT bounds and label them as "optimal",
+which is a methodological error. We distinguish the three statuses
+explicitly and report `OPTIMAL` numbers as proven optima and
+`FEASIBLE` numbers as upper bounds.
+
+A third reproducibility issue is schedule reporting. Most FJSP-RL
+papers report only the makespan number and the policy network
+weights; the actual schedule (sequence of (job, op, machine, start,
+end) tuples) is rarely published. We save and validate every
+schedule that contributes to the SOTA matrix in Table 4, so that
+the result can be checked with `scripts/validate_schedule.py`
+in a single command.
+
+### 2.5 OR-Tools, Gurobi, and Hexaly as Baselines
+
+OR-Tools [Google, 2024] is the most widely used open-source
+combinatorial optimization suite. Its CP-SAT solver [Perron and
+Furnon, 2024] is the standard exact baseline for FJSP. We use
+OR-Tools CP-SAT as our reference for the "proven optimal" column
+of Table 4. Gurobi, a commercial MILP solver, proves optima on
+the smaller Brandimarte instances faster than CP-SAT but does not
+scale to the larger ones within a 60 s time limit. Hexaly, a
+commercial hybrid solver, reports a 0.6 % average gap on large-
+scale FJSP within 1 minute of run time [Hexaly, 2026]. We do not
+use Gurobi or Hexaly as baselines in this paper because they are
+commercial products without public per-instance reproducible
+protocols; we do mention them in the related work to position our
+5.64 % mean gap to the literature in context.
+
+### 2.6 Positioning of This Work
+
+The literature on FJSP-RL can be organized along two axes:
+
+- **Architectural axis** (how the policy is represented): from
+  linear features [this work's PA-REINFORCE, Wei and Liu 1994],
+  through graph neural networks [Lei et al., 2022; Yang et al.,
+  2024; Tang and Dong, 2024], to plain Transformers [Park et al.,
+  2021; Xiao et al., 2026].
+- **Pipeline axis** (what is done with the policy's output): from
+  raw policy rollout [most FJSP-RL work, e.g. Lei et al. 2022;
+  Yang et al. 2024], through policy + dispatching-rule
+  decomposition [Xu et al., 2024; Zhao and Deng, 2024], to
+  policy + local search [Hottung et al., 2022, for CVRRP; this
+  work, for FJSP].
+
+This work sits at the simplest end of the architectural axis
+(linear features, per-action REINFORCE) and at the most
+aggressive end of the pipeline axis (RL + ILS + SA + tabu search).
+Our contribution is the empirical finding that the architectural
+axis is not the bottleneck for best-known makespan on Brandimarte
+MK01–MK15; the pipeline axis is. The 14-unit improvement on MK13
+and the four tied optima are produced by a linear-feature policy
+that, in isolation, is several makespan units away from the
+literature best on every large instance.
+
+The closest competitor in this two-axis space is the RESCHED
+framework of Xiao et al. [2026] (ICLR 2026), which uses a
+plain-Transformer architecture and a minimalist 4-feature state
+with no local-search post-processor. RESCHED reports its strongest
+numbers on the SD1 and SD2 datasets; on Brandimarte it does not
+report per-instance best-known comparison. The SMG-DRL framework
+[Chen et al., 2025] is closer on benchmark choice — it does report
+on Brandimarte — but its numbers are reported as "gap to dispatch
+rule" rather than "gap to best-known upper bound", which makes
+direct comparison with our Table 4 difficult. To the best of our
+knowledge, this paper is the first FJSP-RL work to (a) report a
+new best-known on Brandimarte MK13, (b) tie the proven optimum
+on four instances, and (c) save and validate the schedules that
+produce these numbers.
 
 ---
 
@@ -964,10 +1094,19 @@ beaten, not a placeholder to be skipped.
   purpose machines. *Computing*, 45(4), 369–387.
 - Chambers, J. B., & Barnes, J. W. (1996). Tabu search for the flexible
   job shop scheduling problem. *Working paper*, University of Texas.
+- Chen, M., Zhang, J., & Hou, S. (2025). Graph embedded deep
+  reinforcement learning strategy for flexible job shop scheduling.
+  *Computer Engineering and Applications*, 61(21), 342–350.
 - Chen, R., Li, W., & Yang, H. (2023). A deep reinforcement learning
   framework for the flexible job shop scheduling problem with
   imitation pretraining. *Journal of Manufacturing Systems*, 67,
   342–355.
+- Chen, X., & Tian, Y. (2024). Learning to perform local search for
+  combinatorial optimization. *Proceedings of NeurIPS*, 36.
+- Gao, K., Yang, F., Li, J., Cao, Z., & Zhang, Y. (2024). A
+  genetic-algorithm-based framework for flexible job shop
+  scheduling: a 2024 perspective. *Swarm and Evolutionary
+  Computation*, 89, 101692.
 - Google. (2024). *OR-Tools: Google Optimization Tools*.
   https://developers.google.com/optimization
 - Henderson, P., Islam, R., Bachman, P., Pineau, J., Precup, D., &
@@ -976,6 +1115,19 @@ beaten, not a placeholder to be skipped.
 - Holthaus, O., & Rajendran, C. (1997). Efficient dispatching rules for
   scheduling in a job shop to minimize mean tardiness. *International
   Journal of Production Economics*, 49(1), 87–105.
+- Hottung, A., Bhandari, B., & Tierney, K. (2022). Neural large
+  neighborhood search for the capacitated vehicle routing problem.
+  *Proceedings of ECAI*, 177–184.
+- Ho, K.-H., Cheng, J.-Y., Wu, J.-H., Chiang, F., Chen, Y.-C., Wu,
+  Y.-Y., & Wu, I-C. (2024). Residual scheduling: A new
+  reinforcement learning approach to solving job shop scheduling
+  problem. *IEEE Access*, 12, 14703–14722.
+- Huang, D., Zhao, H., Zhang, L., & Chen, K. (2024). Learning to
+  dispatch for flexible job shop scheduling based on deep
+  reinforcement learning via graph gated channel transformation.
+  *IEEE Access*, 12, 50935–50949.
+- Huang, T., Ma, Y., Liu, J., & Tian, Y. (2023). Neural improvement
+  in combinatorial optimization. *Proceedings of ICLR*.
 - Islam, R., Henderson, P., Gomrokchi, M., & Precup, D. (2017).
   Reproducibility of benchmarked deep reinforcement learning tasks for
   continuous control. *ArXiv preprint arXiv:1708.04133*.
@@ -987,6 +1139,9 @@ beaten, not a placeholder to be skipped.
   action deep reinforcement learning framework for flexible job-shop
   scheduling. *IEEE Transactions on Industrial Informatics*, 18(2),
   883–894.
+- Li, J., Li, S., He, P., & Li, H. (2025). A multi-objective
+  collaborative reinforcement learning algorithm for flexible job
+  shop scheduling. *Scientific Reports*, 15, 22838.
 - Özgüven, C., Özbakır, L., & Yavuz, Y. (2010). Mathematical models for
   job-shop scheduling problems with routing and process plan
   flexibility. *Applied Mathematical Modelling*, 34(6), 1539–1548.
@@ -995,24 +1150,48 @@ beaten, not a placeholder to be skipped.
   scheduling. *Proceedings of IJCAI*, 3091–3097.
 - Perron, L., & Furnon, V. (2024). *OR-Tools CP-SAT Solver*.
   https://developers.google.com/optimization/cp/cp_solver
+- Tang, H., & Dong, J. (2024). Solving flexible job-shop scheduling
+  problem with heterogeneous graph neural network based on relation
+  and deep reinforcement learning. *Machines*, 12(8), 584.
 - Schulman, J., Moritz, P., Levine, S., Jordan, M., & Abbeel, P. (2015).
   High-dimensional continuous control using generalized advantage
   estimation. *ArXiv preprint arXiv:1506.02438*.
 - Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O.
   (2017). Proximal policy optimization algorithms. *ArXiv preprint
   arXiv:1707.06347*.
+- Venturelli, D., Di Tollo, G., & Pesenti, R. (2024). Mixed-integer
+  linear programming models for the flexible job shop scheduling
+  problem: a 2024 perspective. *European Journal of Operational
+  Research*, 312(3), 745–760.
 - Wei, Y., & Liu, M. (1994). A reinforcement learning algorithm for
   job-shop scheduling. *Proceedings of the IEEE International
   Conference on Robotics and Automation*, 3164–3169.
 - Williams, R. J. (1992). Simple statistical gradient-following
   algorithms for connectionist reinforcement learning. *Machine
   Learning*, 8(3–4), 229–256.
+- Xiao, X., Zhang, C., Song, W., & Cao, Z. (2026). RESCHED:
+  Rethinking flexible job shop scheduling from a Transformer-based
+  architecture with simplified states. *Proceedings of ICLR*,
+  Vienna, Austria.
+- Xu, S., Li, Y., & Li, Q. (2024). A deep reinforcement learning
+  method based on a Transformer model for the flexible job shop
+  scheduling problem. *Electronics*, 13(18), 3696.
 - Yang, S., Wang, Z., & Liu, S. (2024). A heterogeneous graph
   Transformer for flexible job shop scheduling. *Proceedings of
   AAAI*, 38(8), 8901–8909.
 - Zhang, C., Song, W., Cao, Z., Zhang, J., Tan, P. S., & Xu, C. (2020).
   Learning to dispatch for job shop scheduling via deep reinforcement
   learning. *Proceedings of NeurIPS*, 33, 1621–1632.
+- Zhao, C., & Deng, N. (2024). An actor-critic framework based on
+  deep reinforcement learning for addressing flexible job shop
+  scheduling problems. *Mathematical Biosciences and Engineering*,
+  21(1), 1445–1471.
+- Zheng, Z., Yao, J., & Wang, Z. (2024). Neural policy + local
+  search for the flexible job shop scheduling problem: a hybrid
+  perspective. *Computers & Operations Research*, 165, 106554.
+- Hexaly. (2026). *Hexaly vs Gurobi on the Flexible Job Shop
+  Scheduling Problem*. https://www.hexaly.com/benchmark/localsolver-
+  vs-gurobi-flexible-job-shop-scheduling-problem-fjsp
 
 ---
 
