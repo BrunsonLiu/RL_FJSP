@@ -92,6 +92,15 @@
 \newcommand{\Var}{\operatorname{Var}}
 \newcommand{\Rplus}{\reals_{\geq 0}}
 
+% --- Latin abbreviations (proper non-sentence-ending periods) --------------
+\newcommand{\ie}{i.e.\!}
+\newcommand{\eg}{e.g.\!}
+\newcommand{\etc}{etc.\!}
+\newcommand{\cf}{cf.\!}
+\newcommand{\wrt}{w.r.t.\!}
+\newcommand{\etal}{et~al.\!}
+\newcommand{\viz}{viz.\!}
+
 % --- Title -----------------------------------------------------------------
 \title{\textbf{Per-Action REINFORCE for Flexible Job Shop Dispatch: \\
 An Empirical Study on the Brandimarte Benchmark}}
@@ -127,18 +136,18 @@ MK01--MK10 instances at a 50-episode budget and ties or beats the
 OR-Tools CP-SAT solver on three of the five MK11--MK15 instances
 at a 100-episode budget. Combined with an iterated local search
 (ILS), simulated annealing (SA) and tabu search (TS) post-processor,
-the per-action REINFORCE policy \textbf{ties the proven OR-Tools
+the per-action REINFORCE policy \emph{ties the proven OR-Tools
 optimum on four Brandimarte instances (MK03, MK08, MK12, MK14)
-and sets a new state-of-the-art on MK13, finding a schedule with
+and sets a new state-of-the-art on MK13}, finding a schedule with
 makespan 416 that improves the previous best-known upper bound of
-430 by 14 makespan units}. On the remaining ten instances, the
+430 by 14 makespan units. On the remaining ten instances, the
 combined pipeline is within 2--30 makespan units of the
-literature, with a mean gap of \textbf{5.64\%} across all 15
+literature, with a mean gap of $5.64\%$ across all 15
 instances. We document two reproducibility issues encountered
-during the study --- a missing \texttt{eval()} call in a
+during the study---a missing \texttt{eval()} call in a
 dropout-based heterogeneous graph model that invalidated prior
 published-style numbers, and a methodological error in
-interpreting time-limited CP-SAT runs as optimal --- and release
+interpreting time-limited CP-SAT runs as optimal---and release
 a fully reproducible testbed. Our findings suggest that for FJSP
 dispatch at the single-instance scale considered here,
 handcrafted per-action features with a plain policy-gradient
@@ -187,9 +196,9 @@ OR-Tools baseline?} The answer we arrived at, after many dead
 ends, surprised us:
 
 \begin{quote}
-\textbf{A per-action REINFORCE policy with eight handcrafted
+\emph{Result.} A per-action REINFORCE policy with eight handcrafted
 features, no value head, no graph, no attention, and 100 episodes
-of training, is the strongest agent we built.} It is the best
+of training, is \emph{the strongest agent we built.} It is the best
 agent on all 10 Brandimarte MK01--MK10 instances at a 50-episode
 budget, ties the proven OR-Tools optimum on MK14, and beats the
 time-limited OR-Tools feasible bound on MK10.
@@ -427,7 +436,7 @@ all flip conclusions \citep{Islam2017, Henderson2018}. In the
 FJSP-RL subfield the issue is amplified by the small number of
 standard benchmarks (Brandimarte MK and Hurink sets) and the
 relative scarcity of multi-seed studies. Our HGT dropout bug
-(\S\ref{sec:lessons}) is, to our knowledge, the first documented
+(\S\ref{sec:lessons-hgt}) is, to our knowledge, the first documented
 instance in this subfield; we suspect it is not the only one.
 
 A second reproducibility issue is the OR-Tools CP-SAT baseline
@@ -483,12 +492,12 @@ The literature on FJSP-RL can be organized along two axes:
       networks \citep{Lei2022, Yang2024, Tang2024, Wang2022DAN}, to
       plain Transformers \citep{Park2021, Xiao2026RESCHED}.
 \item \textbf{Pipeline axis} (what is done with the policy's
-      output): from raw policy rollout [most FJSP-RL work, e.g.\
+      output): from raw policy rollout [most FJSP-RL work, \eg\
       \citet{Lei2022, Yang2024, Wang2022DAN}], through policy +
       dispatching-rule decomposition \citep{Xu2024, Zhao2024}, to
-      RL-guided improvement heuristic \citep{Zhang2024L2I, ICLR
-      2024} and policy + local search
-      \citep{Hottung2022, for VRP; this work, for FJSP}.
+      RL-guided improvement heuristic \citep{Zhang2024L2I, Hottung2022}
+      and, in this work, to the most aggressive end: a multi-stage
+      ILS + SA + tabu search post-processor.
 \end{itemize}
 
 This work sits at the simplest end of the architectural axis
@@ -1177,7 +1186,7 @@ disk and independently re-validated by
 \texttt{scripts/validate\_schedule.py}). MK12 is the only
 TIED-OPT case that did not reproduce under the simpler pipeline
 in this paper's re-validation; we report 524 (gap +16) and
-acknowledge the result in \S\ref{sec:lessons}. Mean gap to
+acknowledge the result in \S\ref{sec:lessons-bc}. Mean gap to
 literature = 5.71\%.}
 \label{tab:sota-matrix}
 \small
@@ -1369,13 +1378,13 @@ Large  (MK11--MK15) & 5 & $+1.18\%$ & $-3.3\%$ & $+8.5\%$ \\
 
 \emph{Counterintuitively, the pipeline performs \emph{better}
 on the largest instances} (mean gap $+1.18\%$, with MK13 at
-$-3.3\%$ i.e.\ NEW SOTA). The largest absolute gaps occur on
+$-3.3\%$, \ie\ NEW SOTA). The largest absolute gaps occur on
 small instances: MK04 (15$\times$8) is the worst at
 $+21.7\%$. We attribute this to two factors: (i) the EF
 baseline is already a strong heuristic on small dense
 instances, leaving little headroom for our pipeline; (ii) the
 RL signal-to-noise ratio degrades on small action spaces
-because the per-seed variance (e.g.\ MK12 std = 349) is
+because the per-seed variance (\eg\ MK12 std = 349) is
 proportionally large.
 
 \subsubsection{Failure mode analysis}
@@ -1411,7 +1420,7 @@ or positive.
 
 \begin{table}[h]
 \centering
-\caption{L2I (Wu et al.\ ICLR 2024) on Brandimarte.
+\caption{L2I (Wu \etal\ ICLR 2024) on Brandimarte.
 L2I = RL agent that selects which of 4 neighborhood
 operators to apply at each step, trained with REINFORCE
 from a random initial schedule, 5 seeds $\times$ 200 steps.
@@ -1444,7 +1453,7 @@ mk15 & 549 & 721 & 370 & 341 & +111.4\% & +8.5\%  & $-351$ \\
 \end{tabular}
 \end{table}
 
-The L2I paradigm (Wu et al.\ ICLR 2024) is the most direct
+The L2I paradigm (Wu \etal\ ICLR 2024) is the most direct
 prior work for our pipeline: same improvement-search
 metaphor, same neighborhood operators, but a \emph{learned}
 policy for operator selection in place of our fixed
@@ -1471,7 +1480,7 @@ VRP domain (the original paper targets CVRP/TSP with
 thousands of steps); on FJSP the action space is larger
 per step, so 200 steps exhaust the easy gains.
 
-We do not run RESCHED (Xiao et al.\ ICLR 2026) in this
+We do not run RESCHED (Xiao \etal\ ICLR 2026) in this
 study because its public code reports results on
 Hurink and SD1/SD2 but not on the full Brandimarte
 suite; we would be running a partial re-implementation
@@ -1655,7 +1664,7 @@ All reported results are on Brandimarte MK01--MK15. We do
 not evaluate on Hurink (e-data, r-data, v-data) or on the
 SD1/SD2 generated sets used by RESCHED. The generalizability
 of our per-action features to a substantially different
-distribution (e.g.\ Hurink's shorter, more flexible
+distribution (\eg\ Hurink's shorter, more flexible
 instances) is \emph{unverified} and is one of the main
 threats to external validity.
 
@@ -1688,7 +1697,7 @@ on the full Brandimarte suite.
 The five saved SOTA schedules (MK03, MK08, MK12, MK13,
 MK14) are validated by \texttt{scripts/validate\_schedule.py}
 using the environment's own decoder. An \emph{independent}
-third-party validator (e.g.\ a separate CP-SAT model or
+third-party validator (\eg\ a separate CP-SAT model or
 hand-traced schedule) was not run on the saved schedules
 and would be a stronger reproducibility check.
 
