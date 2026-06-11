@@ -1123,6 +1123,77 @@ some of this regression on MK10 ($242 \to 224$) and MK15
 ($408 \to 370$). For the other 11 instances SA is neutral
 or positive.
 
+\subsubsection{Comparison with the L2I (Learning-to-Improve) paradigm}
+
+\begin{table}[h]
+\centering
+\caption{L2I (Wu et al.\ ICLR 2024) on Brandimarte.
+L2I = RL agent that selects which of 4 neighborhood
+operators to apply at each step, trained with REINFORCE
+from a random initial schedule, 5 seeds $\times$ 200 steps.
+Our pipeline uses an RL-pretrained initial schedule
++ multi-start ILS + SA + TS.}
+\label{tab:l2i}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+& \textbf{EF} & \textbf{L2I} & \textbf{Ours} & \textbf{Lit} & \textbf{L2I gap} & \textbf{Ours gap} & $\Delta$ \\
+\midrule
+mk01 & 57  & 60  & 42  & 40  & +50.0\% & +5.0\%  & $-18$ \\
+mk02 & 62  & 43  & 28  & 26  & +65.4\% & +7.7\%  & $-15$ \\
+mk03 & 331 & 257 & 204 & 204 & +26.0\% & 0.0\%   & $-53$ \\
+mk04 & 91  & 88  & 73  & 60  & +46.7\% & +21.7\% & $-15$ \\
+mk05 & 220 & 228 & 176 & 172 & +32.6\% & +2.3\%  & $-52$ \\
+mk06 & 79  & 142 & 68  & 58  & +144.8\% & +17.2\% & $-74$ \\
+mk07 & 204 & 199 & 143 & 139 & +43.2\% & +2.9\%  & $-56$ \\
+mk08 & 618 & 673 & 523 & 523 & +28.7\% & 0.0\%   & $-150$ \\
+mk09 & 433 & 580 & 332 & 307 & +88.9\% & +8.1\%  & $-248$ \\
+mk10 & 406 & 454 & 224 & 197 & +130.5\% & +13.7\% & $-230$ \\
+mk11 & 706 & 795 & 619 & 615 & +29.3\% & +0.7\%  & $-176$ \\
+mk12 & 700 & 689 & 508 & 508 & +35.6\% & 0.0\%   & $-181$ \\
+mk13 & 622 & 773 & 416 & 430 & +79.8\% & $-3.3\%$ & $-357$ \\
+mk14 & 833 & 988 & 694 & 694 & +42.4\% & 0.0\%   & $-294$ \\
+mk15 & 549 & 721 & 370 & 341 & +111.4\% & +8.5\%  & $-351$ \\
+\midrule
+\textbf{Mean} & & & & & \textbf{+63.7\%} & \textbf{+5.6\%} & $-151$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The L2I paradigm (Wu et al.\ ICLR 2024) is the most direct
+prior work for our pipeline: same improvement-search
+metaphor, same neighborhood operators, but a \emph{learned}
+policy for operator selection in place of our fixed
+operator sequence. We re-implement L2I faithfully (10-D
+state, 4-op action, REINFORCE, 200 steps, 5 seeds, random
+init) and report best-of-5 on each Brandimarte instance.
+
+The L2I paradigm \emph{by itself} achieves a mean gap of
+$+63.7\%$ to the literature best-known (varying from
+$+26.0\%$ on MK03 to $+144.8\%$ on MK06). Our pipeline,
+by contrast, achieves $+5.6\%$ on the same instances.
+On every single instance our pipeline beats L2I by an
+average of 151 makespan units ($\min = -15$ on MK04,
+$\max = -357$ on MK13).
+
+We attribute the gap to two architectural choices that
+L2I \emph{by itself} does not make: (i) a pretrained
+RL dispatch policy to produce a strong initial schedule
+(L2I starts from random, mean $\sim 1500$ makespan); (ii)
+a multi-start ILS loop with critical-path and random
+perturbations, which the L2I paradigm does not include.
+L2I is also published with larger step budgets in the
+VRP domain (the original paper targets CVRP/TSP with
+thousands of steps); on FJSP the action space is larger
+per step, so 200 steps exhaust the easy gains.
+
+We do not run RESCHED (Xiao et al.\ ICLR 2026) in this
+study because its public code reports results on
+Hurink and SD1/SD2 but not on the full Brandimarte
+suite; we would be running a partial re-implementation
+without the original code. \emph{This is a known
+limitation, which we list in \S\ref{sec:discussion}.}
+
 % =============================================================================
 \section{Lessons Learned}
 \label{sec:lessons}

@@ -1,0 +1,92 @@
+[
+  {
+    "instance": "mk01",
+    "init_ms": 129,
+    "l2i_best": 60,
+    "time_s": 12.08
+  },
+  {
+    "instance": "mk02",
+    "init_ms": 176,
+    "l2i_best": 43,
+    "time_s": 13.21
+  },
+  {
+    "instance": "mk03",
+    "init_ms": 1262,
+    "l2i_best": 257,
+    "time_s": 30.53
+  },
+  {
+    "instance": "mk04",
+    "init_ms": 345,
+    "l2i_best": 88,
+    "time_s": 15.99
+  },
+  {
+    "instance": "mk05",
+    "init_ms": 574,
+    "l2i_best": 228,
+    "time_s": 15.89
+  },
+  {
+    "instance": "mk06",
+    "init_ms": 636,
+    "l2i_best": 142,
+    "time_s": 28.43
+  },
+  {
+    "instance": "mk07",
+    "init_ms": 787,
+    "l2i_best": 199,
+    "time_s": 16.92
+  },
+  {
+    "instance": "mk08",
+    "init_ms": 2410,
+    "l2i_best": 673,
+    "time_s": 30.06
+  },
+  {
+    "instance": "mk09",
+    "init_ms": 2090,
+    "l2i_best": 580,
+    "time_s": 35.07
+  },
+  {
+    "instance": "mk10",
+    "init_ms": 2039,
+    "l2i_best": 454,
+    "time_s": 40.96
+  },
+  {
+    "instance": "mk11",
+    "init_ms": 2388,
+    "l2i_best": 795,
+    "time_s": 21.08
+  },
+  {
+    "instance": "mk12",
+    "init_ms": 2154,
+    "l2i_best": 689,
+    "time_s": 24.58
+  },
+  {
+    "instance": "mk13",
+    "init_ms": 3106,
+    "l2i_best": 773,
+    "time_s": 51.29
+  },
+  {
+    "instance": "mk14",
+    "init_ms": 3708,
+    "l2i_best": 988,
+    "time_s": 31.21
+  },
+  {
+    "instance": "mk15",
+    "init_ms": 3596,
+    "l2i_best": 721,
+    "time_s": 45.76
+  }
+]
