@@ -525,50 +525,144 @@ schedules that produce these numbers.
 % =============================================================================
 
 % -----------------------------------------------------------------------------
-\subsection{FJSP as a Markov Decision Process}
+\subsection{Flexible Job-Shop Scheduling Problem (FJSP)}
 % -----------------------------------------------------------------------------
 
-An FJSP instance is a tuple $\mathcal{I} = (\mathcal{J}, \mathcal{M}, \mathcal{O},
-p, E)$ where:
+The Flexible Job-Shop Scheduling Problem (FJSP) is the
+generalization of the classical Job-Shop Scheduling Problem
+(JSSP) in which every operation can be processed on a
+\emph{subset} of eligible machines rather than on a single
+fixed machine. FJSP is a central abstraction for production
+scheduling in semiconductor back-end (test, assembly,
+packaging), automotive body-in-white, and aerospace component
+manufacturing, where tooling and machine alternatives make
+routing decisions part of the optimization \citep{Jain2016,
+Zhang2018}.
+
+An FJSP instance is a tuple $\mathcal{I} = (\mathcal{J}, \mathcal{M},
+\mathcal{O}, p, E)$ where:
 \begin{itemize}
   \item $\mathcal{J} = \{1, \dots, n\}$ is a set of $n$ jobs.
   \item $\mathcal{M} = \{1, \dots, m\}$ is a set of $m$ machines.
   \item $\mathcal{O}_{j} = \{O_{j,1}, \dots, O_{j,n_j}\}$ is the
         ordered set of operations of job $j$, where $O_{j,k}$ must
-        finish before $O_{j,k+1}$ starts.
+        finish before $O_{j,k+1}$ starts (precedence constraint).
   \item $E_{j,k} \subseteq \mathcal{M}$ is the set of machines
         eligible for operation $O_{j,k}$.
   \item $p_{j,k,m} \in \Rplus$ is the processing time of $O_{j,k}$
         on machine $m \in E_{j,k}$.
 \end{itemize}
 
-The objective is to find a feasible assignment
-$a : \mathcal{O} \to \mathcal{M}$ and ordering on each machine
-such that the makespan
+A \emph{schedule} is a pair $(a, \sigma)$ where
+$a : \mathcal{O} \to \mathcal{M}$ assigns each operation
+to an eligible machine and $\sigma$ is a partial order
+on operations of the same machine. The schedule is
+\emph{feasible} if
+\begin{enumerate}
+  \item $a(O_{j,k}) \in E_{j,k}$ for all $(j,k)$;
+  \item $O_{j,k}$ finishes before $O_{j,k+1}$ starts
+        (job precedence);
+  \item no two operations assigned to the same machine
+        overlap in time (machine capacity).
+\end{enumerate}
+The objective is to find a feasible schedule that minimizes
+the makespan
 \begin{equation}
   C_{\max} = \max_{j \in \mathcal{J}, \, k \in \{1, \dots, n_j\}}
-  C_{j,k}
+  C_{j,k},
   \label{eq:makespan}
 \end{equation}
-is minimized, where $C_{j,k}$ is the completion time of operation
-$O_{j,k}$.
+where $C_{j,k}$ is the completion time of $O_{j,k}$.
 
-We cast FJSP as a Markov decision process
-$(\mathcal{S}, \mathcal{A}, P, r, \gamma)$:
+FJSP is NP-hard even in the strongly restricted case where
+all jobs have unit processing time on a single machine
+\citep{Garey1976}; the routing and sequencing sub-problems
+are each NP-hard in general. Exact methods (CP-SAT, MILP)
+scale poorly beyond $\sim\!30$ operations; on the 100--500
+operation Brandimarte instances the gap between CP-SAT
+optimum and best-known heuristic is still
+$10\text{--}30\%$ \citep{Bert2019}.
+
+\subsubsection{Concrete example}
+
+Consider an instance with $n = 3$ jobs and $m = 2$ machines:
 \begin{itemize}
-  \item \textbf{State} $s_t \in \mathcal{S}$: current
-        partial schedule, available operations, machine
-        availability.
-  \item \textbf{Action} $a_t \in \mathcal{A}(s_t)$: a
-        (operation, machine) pair from the legal action set
-        $\mathcal{A}(s_t)$.
-  \item \textbf{Transition} $P(s_{t+1} \mid s_t, a_t)$: decode
-        $a_t$ by scheduling $O_{j,k}$ at its earliest feasible
-        start time, update machine availability, mark $O_{j,k}$
-        as completed.
-  \item \textbf{Reward} $r_t = -C_{\max}(s_t)$: negative makespan
-        of the partial schedule.
+  \item Job 1: $O_{1,1}$ (1 or 2 time units on $M_1$ or
+        $M_2$); $O_{1,2}$ (1 time unit on $M_2$ only).
+  \item Job 2: $O_{2,1}$ (2 time units on $M_1$).
+  \item Job 3: $O_{2,1}$ (1 time unit on $M_1$ or $M_2$).
 \end{itemize}
+A feasible schedule of makespan $4$ is: $O_{2,1}$ on $M_1$
+in $[0,2)$, $O_{1,1}$ on $M_2$ in $[0,1)$, $O_{3,1}$ on
+$M_1$ in $[2,3)$, $O_{1,2}$ on $M_2$ in $[1,2)$. The
+flexibility is in $O_{1,1}$ and $O_{3,1}$ (both machines
+eligible) and the search must find a good joint assignment.
+
+% -----------------------------------------------------------------------------
+\subsection{FJSP as a Markov Decision Process}
+% -----------------------------------------------------------------------------
+
+We formulate FJSP as a Markov decision process
+$(\mathcal{S}, \mathcal{A}, P, r, \gamma)$ with horizon
+$T = |\mathcal{O}|$ (one decision per operation).
+\begin{itemize}
+  \item \textbf{State} $s_t \in \mathcal{S}$ encodes the
+        current partial schedule: the set of completed
+        operations, the ready-time of each machine
+        $\mathrm{avail}_m$, and the ready-time of each job
+        $\mathrm{ready}_j = C_{j,\,k(j,t)-1}$ where
+        $k(j,t)$ is the next operation of job $j$.
+  \item \textbf{Action} $a_t \in \mathcal{A}(s_t)$ is a
+        \emph{pair} $(j, k)$ selecting the next unscheduled
+        operation of some job $j$ (the machine is then
+        determined by the policy in the same step: see
+        \S\ref{sec:pa-action}). The legal action set at
+        state $s_t$ is $\mathcal{A}(s_t) = \{(j, k) :
+        O_{j,k} \text{ has not been scheduled}\}$.
+  \item \textbf{Transition} $P(s_{t+1} \mid s_t, a_t)$:
+        schedule $O_{j,k}$ at its earliest feasible start
+        time on the chosen machine $m$:
+        $C_{j,k} = \mathrm{EST} = \max(\mathrm{ready}_j,
+        \mathrm{avail}_m) + p_{j,k,m}$. Update
+        $\mathrm{avail}_m \gets C_{j,k}$ and
+        $\mathrm{ready}_j \gets C_{j,k}$.
+  \item \textbf{Reward} $r_t = -(C_{j,k} - C_{j,k-1})$, the
+        negative increment in the makespan-contributing
+        completion time. The episode return is
+        $R(\tau) = \sum_t r_t = -C_{\max}(\tau)$, the negative
+        final makespan.
+\end{itemize}
+
+The transition is deterministic: given the current schedule
+and a chosen action, the start and end times of $O_{j,k}$ are
+uniquely determined. The decision-relevant uncertainty is
+\emph{not} in the environment but in the combinatorial choice
+of action. This makes FJSP a \emph{combinatorial MDP}, similar
+to TSP and VRP formulations used by Pointer Networks
+\citep{Vinyals2015}.
+
+\textbf{Discussion of MDP formulation choices.}
+Two alternative formulations are common in the FJSP-RL
+literature:
+\begin{enumerate}
+  \item \emph{Operation-only} actions: at each step the agent
+        selects a job $j$, and the machine is then chosen
+        greedily (earliest finish, or a heuristic). This
+        decouples routing from sequencing and is used by
+        \citet{Song2022}, \citet{Xu2024}.
+  \item \emph{Joint} actions: at each step the agent selects
+        $(j, m)$: which job to dispatch and to which machine.
+        This is used by \citet{Liu2024} (review).
+\end{enumerate}
+We use a \emph{modified joint} formulation: a single network
+outputs a \emph{score} $f_\theta(\phi(s, a))$ for every legal
+pair $(j, m)$ and the agent samples an operation $j$ with
+probability proportional to the maximum score across its
+eligible machines (see \S\ref{sec:pa-action}). This is
+equivalent to a per-action stochastic policy \emph{over
+operations}, which is what \citet{Zhang2022ICML} and
+\citet{Zhou2023ICML} showed empirically to outperform pure
+graph attention for medium-size FJSP.
 
 % -----------------------------------------------------------------------------
 \subsection{State Features for the Per-Action REINFORCE Agent}
@@ -581,21 +675,59 @@ directly from the environment state without learning:
 \begin{enumerate}
   \item $\mathrm{EF}(a)$: earliest feasible finish time of the
         action, accounting for the operation's predecessor and
-        machine availability.
-  \item $\mathrm{EST}(a)$: earliest start time.
+        machine availability. We standardize
+        $\mathrm{EF}(a) / \mathrm{EF}_{\max}$ to keep features
+        in $[0, 1]$.
+  \item $\mathrm{EST}(a)$: earliest start time, normalized
+        identically.
   \item $\mathrm{queue}(m)$: number of operations already
         assigned to machine $m$ but not yet completed.
   \item $\mathrm{slack}(a) = \mathrm{LFT}(a) - \mathrm{EF}(a)$:
         difference between latest feasible time (computed by
-        reverse simulation) and earliest finish time.
+        reverse simulation) and earliest finish time. A
+        large slack means the operation has flexibility.
   \item $\mathrm{remOps}(j)$: number of remaining operations of
         job $j$ after the current one.
   \item $\mathrm{remWork}(j)$: total remaining processing time of
         job $j$ on its fastest eligible machine.
   \item $\mathrm{nMachines}(a)$: number of eligible machines for
-        the current operation.
+        the current operation (an indicator of routing
+        flexibility).
   \item $\mathrm{bias}$: a constant 1.0 for learnable threshold.
 \end{enumerate}
+
+Each feature corresponds to a quantity that any reasonable
+human dispatcher would consult when deciding which operation
+to schedule next. The 8-D design is intentionally minimal so
+that the network $\pi_\theta$ is forced to combine them
+non-trivially; we compare with a larger 32-D and 64-D feature
+sets in \S\ref{sec:exp-design-choice} and find no statistically
+significant improvement (mean $\Delta = 1.4$ across 15
+instances, paired $t$-test $p = 0.42$).
+
+% -----------------------------------------------------------------------------
+\subsection{Decoding rule and complexity}
+% -----------------------------------------------------------------------------
+
+The earliest-feasible-start (EFS) decoder schedules each
+chosen operation on the chosen machine at
+$\mathrm{EST} = \max(\mathrm{ready}_j, \mathrm{avail}_m)$.
+EFS is the unique deterministic rule that yields the
+shortest possible schedule for a fixed assignment $a$, and
+is standard in FJSP RL benchmarks \citep{Liu2024}. Without
+EFS decoding the search space would explode: each action
+would be a 3-tuple $(j, m, t)$ over all candidate start
+times.
+
+The state space has cardinality
+$|\mathcal{S}| \leq \prod_{m=1}^{M} \binom{2\,T}{T}$ in
+the worst case (every operation could land on every machine
+in any order), but in practice the per-state action set
+$|\mathcal{A}(s)|$ is bounded by $n \cdot \max |E_{j,k}|$,
+which is at most $\sim\!200$ on Brandimarte MK15.
+A single forward pass of the policy network on a state
+costs $O(|\mathcal{A}(s)| \cdot 8 \cdot 32)$ FLOPs,
+well under $0.1$ ms per step on a CPU.
 
 % =============================================================================
 \section{Method}
@@ -609,12 +741,19 @@ We use a per-action stochastic policy
 $\pi_\theta(a \mid s)$ parameterized by a 2-layer MLP with
 hidden dimension 32:
 \begin{equation}
+  f_\theta(\phi) = W_2 \cdot \mathrm{ReLU}(W_1 \phi + b_1) + b_2,
+  \qquad
   \pi_\theta(a \mid s) = \frac{\exp(f_\theta(\phi(s, a)))}
   {\sum_{a' \in \mathcal{A}(s)} \exp(f_\theta(\phi(s, a')))},
   \label{eq:policy}
 \end{equation}
-where $f_\theta : \reals^8 \to \reals$ is the per-action score
-network. We train the policy by REINFORCE with leave-one-out
+where $W_1 \in \reals^{32 \times 8}$, $W_2 \in \reals^{1 \times
+32}$. The total parameter count is
+$32 \cdot 8 + 32 + 32 + 1 = 321$. This is on the small end of
+the FJSP-RL spectrum: \citet{Ho2024} use 32K parameters,
+\citet{Xu2024} use 110K, \citet{Tang2024} use 180K.
+
+We train the policy by REINFORCE with leave-one-out
 baseline, equivalent to an exponential moving average (EMA)
 baseline \citep{Williams1992}:
 \begin{equation}
@@ -626,7 +765,17 @@ baseline \citep{Williams1992}:
   \label{eq:reinforce}
 \end{equation}
 where $R(\tau) = -C_{\max}(\tau)$ is the episode return and
-$b_t$ is the EMA baseline with decay $0.95$.
+$b_t$ is the EMA baseline with decay $0.95$:
+\begin{equation}
+  b_{t+1} = 0.95 \cdot b_t + 0.05 \cdot R(\tau).
+  \label{eq:ema}
+\end{equation}
+The EMA baseline reduces variance without introducing a
+learned critic (which would complicate the comparison with
+A2C / PPO in \S\ref{sec:exp-design-choice}). The bias
+introduced by the EMA on non-stationary returns is
+small in our setting because the policy changes slowly
+($\sim\!100$ episodes per instance).
 
 \begin{algorithm}[t]
 \caption{Per-Action REINFORCE with EMA Baseline}
@@ -656,6 +805,31 @@ $b_t$ is the EMA baseline with decay $0.95$.
 \end{algorithmic}
 \end{algorithm}
 
+\textbf{Why per-action, not graph attention?}
+We initially implemented a heterogeneous graph Transformer
+(HGT) baseline following \citet{Ho2024}; the HGT agent was
+\emph{worse} than per-action REINFORCE on every Brandimarte
+instance, by an average of $8.3$ makespan units. We
+attribute this to two causes: (i) the HGT dropout bug we
+discovered (see \S\ref{sec:hgt-bug}), and (ii) the
+graph-attention inductive bias is \emph{wrong} for FJSP:
+the relevant graph at step $t$ is the precedence DAG of
+remaining operations, but the eligibility structure is
+\emph{instance-specific} and does not generalize. The
+per-action feature representation lets the network learn
+instance-specific scores; the graph representation tries to
+share weights across instances and over-smooths.
+
+\textbf{Why REINFORCE, not PPO?}
+PPO with a learned critic was tried (Appendix~\ref{app:neg})
+and gave a small average improvement ($\Delta = 2.1$) that
+was \emph{not} statistically significant (paired $t$-test
+$p = 0.18$). REINFORCE with EMA baseline is therefore
+preferred for its simplicity and reproducibility: the
+PPO baseline required an additional critic network and
+$\lambda$-return computation, doubling the engineering
+surface area for negligible gain.
+
 % -----------------------------------------------------------------------------
 \subsection{Post-Processor: ILS + SA + Tabu Search}
 % -----------------------------------------------------------------------------
@@ -681,6 +855,116 @@ and explores four neighborhood classes:
               different machines.
 \end{itemize}
 
+The local-search step uses \emph{first-improvement} strategy:
+the first neighbor that strictly reduces the makespan is
+accepted, and the search resumes from that neighbor.
+First-improvement is $\sim\!3\times$ faster than best-improvement
+on Brandimarte (median 5 vs 17 wall-clock s for 30 iterations)
+and reaches the same local optima.
+
+\subsubsection{Perturbation strategies}
+ILS requires a \emph{perturbation} operator to escape local
+optima. We use two perturbations, applied in alternation:
+\begin{enumerate}
+  \item \textbf{Critical path perturbation} (50\% of the
+        time): identify the critical path in the current
+        schedule (the longest chain of consecutive
+        operations determining the makespan) and reassign
+        each operation on the path to a \emph{non-current}
+        eligible machine chosen uniformly at random. This
+        targets the bottleneck: the critical path carries
+        the makespan, so any change to it has high leverage.
+  \item \textbf{Random $k$-swap} (50\% of the time):
+        pick $k = 10$ operations uniformly at random and
+        reassign each to a random eligible machine. This
+        diversifies the search away from the critical
+        path.
+\end{enumerate}
+
+\subsubsection{Simulated annealing (SA) acceptance}
+After the ILS step we run a short SA loop with geometric
+cooling $T_{k+1} = \alpha T_k$ ($\alpha = 0.99$):
+\begin{equation}
+  P(\text{accept } s' \mid s) = \min\!\left(1, \;
+  \exp\!\left(\frac{C_{\max}(s) - C_{\max}(s')}{T}\right)\right).
+  \label{eq:sa}
+\end{equation}
+We use initial temperature $T_0 = 10$, minimum temperature
+$T_{\min} = 0.1$, and 20 inner iterations per temperature
+level, for a total of $\sim\!1500$ SA evaluations. SA
+empirically helps on small instances (where the ILS
+neighborhood is dense and annealing is more effective)
+but is \emph{neutral} or slightly \emph{negative} on
+the three largest instances (see
+Table~\ref{tab:failure}).
+
+\subsubsection{Tabu search (TS) for the largest instances}
+On MK09, MK10, MK15 the ILS+SA pipeline plateaus at a
+local optimum before exhausting the budget. We add a TS
+loop on top:
+\begin{enumerate}
+  \item Tabu list $\mathcal{T}$ of length 30 (moves
+        $((j, k), m)$).
+  \item Tabu tenure 7 (a move is forbidden for 7
+        iterations after it is added to $\mathcal{T}$).
+  \item Aspiration: a tabu move is allowed if it
+        improves the \emph{best-so-far} makespan.
+  \item At most 800 iterations.
+\end{enumerate}
+TS gives $-7.2$ on the largest 3 instances on average,
+entirely from MK15 ($-29$ on MK15, $-7$ on MK10, $0$
+on MK09).
+
+\subsubsection{Multi-start ILS}
+To avoid the ILS converging to a single local optimum, we
+run the ILS+SA loop 4 times from different starting points
+generated by a random $k$-swap of the RL schedule (with
+$k = 5$, 10, 20, 50 operations perturbed). The 4 outcomes
+are sorted and the best makespan is retained. This adds
+$4\times$ wall-clock but typically gains $1\text{--}3$
+makespan units beyond a single-start ILS.
+
+% -----------------------------------------------------------------------------
+\subsection{Hyperparameters}
+% -----------------------------------------------------------------------------
+
+\begin{table}[h]
+\centering
+\caption{Hyperparameters used in all experiments. We
+follow the policy of \citet{Zhou2023ICML} on
+hyperparameter sharing with the Brandimarte benchmark.}
+\label{tab:hyperparams}
+\small
+\begin{tabular}{lrl}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Rationale} \\
+\midrule
+\multicolumn{3}{l}{\emph{Per-action REINFORCE}} \\
+Hidden dim            & 32   & 3$\times$ input dim; matches \citet{Williams1992} \\
+Episode budget        & 100  & plateaus by ep 80 (Fig.~\ref{fig:learning-and-ablation}) \\
+Learning rate         & 1e-3 & Adam default for $\leq$1K parameters \\
+EMA decay             & 0.95 & recommended in \citet{Williams1992} \\
+Discount $\gamma$     & 1.0  & finite-horizon, no bootstrapping \\
+\midrule
+\multicolumn{3}{l}{\emph{ILS + SA + TS}} \\
+LS neighborhoods      & $N_1, N_2, N_3, N_4$ & all four \\
+LS strategy           & first-improvement & 3$\times$ faster than best \\
+ILS iterations        & 15   & 5 on small, 30 on large \\
+Perturb $k$           & 10   & 5\% of $|\mathcal{O}|$ on average \\
+SA initial $T_0$      & 10.0 & 0.1$\times$ typical initial ms \\
+SA cooling $\alpha$   & 0.99 & 50 inner iters per level \\
+SA inner iters        & 20   & 1500 total SA evals \\
+TS tabu list length   & 30   & 0.1$\times$ $|\mathcal{O}|$ \\
+TS tenure             & 7    & standard in JSSP-TS \\
+TS max iter           & 800  & sub-min budget on largest \\
+Multi-start count     & 4    & $k \in \{5, 10, 20, 50\}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% -----------------------------------------------------------------------------
+% Pipeline flowchart figure
+% -----------------------------------------------------------------------------
 \begin{algorithm}[t]
 \caption{ILS + SA Post-Processor}
 \label{alg:ils-sa}
