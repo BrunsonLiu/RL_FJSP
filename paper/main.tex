@@ -1479,12 +1479,21 @@ without the original code. \emph{This is a known
 limitation, which we list in \S\ref{sec:discussion}.}
 
 % =============================================================================
-\section{Lessons Learned}
-\label{sec:lessons}
+\section{Discussion and Negative Results}
+\label{sec:discussion}
 % =============================================================================
 
+The previous section reported our headline numbers; we now
+turn to three diagnostic case studies that we believe
+generalize to other FJSP-RL implementations
+(\S\ref{sec:lessons-hgt}--\ref{sec:lessons-bc}), the
+empirical question of when per-action REINFORCE wins
+and loses (\S\ref{sec:wins-loses}), and the threats to
+validity that future work should address.
+
 % -----------------------------------------------------------------------------
-\subsection{The HGT Dropout Bug}
+\subsection{Case Study 1: The HGT Dropout Bug}
+\label{sec:lessons-hgt}
 % -----------------------------------------------------------------------------
 
 While training the heterogeneous-graph Transformer (HGT) with
@@ -1513,10 +1522,12 @@ def select_action(self, state):
 After the fix, the HGT's true makespan on MK01 is 59 (down from
 the reported 49), and BC + PPO is 66 (down from 57). The
 mistake is subtle enough that it survives code review and
-multi-seed averaging.
+multi-seed averaging. We discuss the broader
+reproducibility implications in \S\ref{sec:limitations}.
 
 % -----------------------------------------------------------------------------
-\subsection{The OR-Tools OPTIMAL vs. FEASIBLE Issue}
+\subsection{Case Study 2: The OR-Tools OPTIMAL vs. FEASIBLE Issue}
+\label{sec:lessons-ortools}
 % -----------------------------------------------------------------------------
 
 CP-SAT returns \texttt{OPTIMAL} for a 60~s run on MK01 with
@@ -1541,7 +1552,8 @@ CP-SAT should always report the solver status
 \texttt{FEASIBLE} 60~s bound is not an optimality claim.
 
 % -----------------------------------------------------------------------------
-\subsection{The Negative Result: BC + PPO / A2C Fine-Tuning}
+\subsection{Case Study 3: A Negative Result on BC + PPO Fine-Tuning}
+\label{sec:lessons-bc}
 % -----------------------------------------------------------------------------
 
 On MK01, we trained HGT-BC with 100 rollouts of the
@@ -1575,14 +1587,12 @@ credit-assignment difficulty in FJSP: the reward is sparse (one
 terminal scalar), the state transition is deterministic, and the
 per-step contribution to the final makespan is hard to estimate.
 PPO and A2C, designed for dense or at least per-step rewards,
-struggle in this regime.
-
-% =============================================================================
-\section{Discussion}
-% =============================================================================
+struggle in this regime. The same pattern was reported by
+\citet{Ho2024} on small FJSP instances.
 
 % -----------------------------------------------------------------------------
 \subsection{When Does Per-Action REINFORCE Win?}
+\label{sec:wins-loses}
 % -----------------------------------------------------------------------------
 
 Per-action REINFORCE wins on Brandimarte MK01--MK15 at 50--100
@@ -1617,7 +1627,7 @@ $= 349$). We see three credible improvements for future work:
 \begin{enumerate}
   \item \textbf{Add a value baseline (A2C) or GAE (PPO)} to
         reduce the variance of the policy gradient. The negative
-        result in \S\ref{sec:lessons} is specifically about
+        result in \S\ref{sec:lessons-bc} is specifically about
         fine-tuning a \emph{graph} encoder with PPO/A2C; applying
         the same to the per-action MLP is a separate experiment.
   \item \textbf{Add behavioral-cloning warm-start} of the
@@ -1630,6 +1640,112 @@ $= 349$). We see three credible improvements for future work:
         single policy trained on many instances at once may learn
         a more transferable representation.
 \end{enumerate}
+
+% =============================================================================
+\section{Limitations}
+\label{sec:limitations}
+% =============================================================================
+
+We explicitly acknowledge the following limitations of the
+present study, in the spirit of the broader-impact statements
+now standard at NeurIPS and ICLR.
+
+\paragraph{L1. Single benchmark family.}
+All reported results are on Brandimarte MK01--MK15. We do
+not evaluate on Hurink (e-data, r-data, v-data) or on the
+SD1/SD2 generated sets used by RESCHED. The generalizability
+of our per-action features to a substantially different
+distribution (e.g.\ Hurink's shorter, more flexible
+instances) is \emph{unverified} and is one of the main
+threats to external validity.
+
+\paragraph{L2. Per-instance training.}
+We train a separate policy per instance; cross-instance
+knowledge transfer is not evaluated. RESCHED, L2D, and
+SMG-DRL train a single policy on multiple instances and
+report cross-size generalization results that we do not
+provide.
+
+\paragraph{L3. Wall-clock.}
+On the three largest Brandimarte instances (MK09, MK10,
+MK15) our pipeline takes 2--3 hours, dominated by the
+ILS+SA+TS loop. OR-Tools CP-SAT with a 600~s cap reaches
+better makespans on MK09 and competitive makespans on
+MK10, MK15 (see Table~\ref{tab:sota-matrix}). We do not
+claim our pipeline is faster than OR-Tools; we claim it
+produces competitive or better makespans in acceptable
+research-iteration time.
+
+\paragraph{L4. L2I comparison is a re-implementation, not a head-to-head with the original code.}
+The L2I result in Table~\ref{tab:l2i} is from a faithful
+re-implementation based on the published description, not
+from the original code. RESCHED is \emph{not} re-run for
+the reasons explained in \S\ref{sec:wins-loses}: its
+public implementation reports on Hurink / SD1 / SD2, not
+on the full Brandimarte suite.
+
+\paragraph{L5. Schedule validation scope.}
+The five saved SOTA schedules (MK03, MK08, MK12, MK13,
+MK14) are validated by \texttt{scripts/validate\_schedule.py}
+using the environment's own decoder. An \emph{independent}
+third-party validator (e.g.\ a separate CP-SAT model or
+hand-traced schedule) was not run on the saved schedules
+and would be a stronger reproducibility check.
+
+\paragraph{L6. Statistical tests are limited.}
+We report best-of-5 seeds rather than mean $\pm$ std and
+do not run paired Wilcoxon signed-rank tests between our
+pipeline and each baseline. The L2I re-implementation
+comparison reports best-of-5 and a single aggregate
+mean gap.
+
+\paragraph{L7. No new SOTA on Hurink or generated sets.}
+A ``new SOTA on Brandimarte'' is a much weaker claim than
+``new SOTA on FJSP''. We mitigate this by tying the
+proven optimum on 3 instances and beating literature
+on 1, but a Hurink evaluation is needed for the broader
+claim.
+
+% =============================================================================
+\section{Future Work}
+\label{sec:future}
+% =============================================================================
+
+We see four concrete directions, ordered by the expected
+return-on-effort.
+
+\paragraph{F1. Multi-instance training.} Train a single
+per-action policy on the union of MK01--MK15 and evaluate
+zero-shot on Hurink. The 8 handcrafted features are
+already instance-agnostic; a single 32-dim embedding
+should generalize.
+
+\paragraph{F2. Block neighborhood for the largest
+instances.} The single-operation neighborhoods
+($N_1$--$N_4$) plateau on MK09, MK10, MK15. A
+\emph{critical-block} neighborhood that perturbs the
+critical path \emph{plus} a contiguous block of
+neighboring operations on the bottleneck machine may
+reach the literature best-known on MK10 and MK15.
+
+\paragraph{F3. RL-pretrained L2I.}
+Apply our per-action MLP to the L2I paradigm
+(\S\ref{sec:lessons-bc}): RL agent selects which
+neighborhood operator to apply, with the L2I
+improvement loop as the outer loop. Our per-action
+features replace the 10-D L2I features; the
+RL-pretrained initial schedule replaces the random
+init. This is the natural combination of our two
+contributions.
+
+\paragraph{F4. Transferability study.}
+A FJSP-RL method that beats a commercial solver on
+synthetically generated instances \emph{and} transfers
+to real factory data would be a much stronger claim
+than ours. We have not pursued real factory data
+because the public FJSP benchmarks do not include
+it; a partnership with a semiconductor back-end line
+is the natural next step.
 
 % =============================================================================
 \section{Conclusion}
