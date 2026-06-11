@@ -38,6 +38,10 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 
+% --- TikZ (for pipeline flowchart figure) ---------------------------------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
 % --- Code listings ---------------------------------------------------------
 \usepackage{listings}
 \lstset{
@@ -700,6 +704,84 @@ and explores four neighborhood classes:
 \end{algorithmic}
 \end{algorithm}
 
+% -----------------------------------------------------------------------------
+% Pipeline flowchart figure
+% -----------------------------------------------------------------------------
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=1.0cm and 1.1cm,
+  every node/.style={font=\small},
+  box/.style={rectangle, rounded corners=3pt, draw=blue!60!black,
+              thick, minimum height=0.85cm, minimum width=2.4cm,
+              align=center, fill=blue!8},
+  orange/.style={rectangle, rounded corners=3pt, draw=orange!80!black,
+                 thick, minimum height=0.85cm, minimum width=2.4cm,
+                 align=center, fill=orange!15},
+  green/.style={rectangle, rounded corners=3pt, draw=ForestGreen,
+                thick, minimum height=0.85cm, minimum width=2.4cm,
+                align=center, fill=ForestGreen!12},
+  red/.style={rectangle, rounded corners=3pt, draw=red!75!black,
+              thick, minimum height=0.85cm, minimum width=2.4cm,
+              align=center, fill=red!10},
+  arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!70!black},
+]
+% Stage 1: RL
+\node[box] (inst) {FJSP \\ \scriptsize{instance}};
+\node[box, right=of inst] (env) {Dispatch \\ \scriptsize env};
+\node[box, right=of env] (pa) {Per-Action \\ \scriptsize REINFORCE};
+\node[orange, right=of pa] (sched) {Initial \\ \scriptsize schedule};
+
+% Stage 2: ILS
+\node[orange, below=of pa] (ls) {Local Search \\ \scriptsize $N_1..N_4$};
+\node[orange, right=of ls] (pert) {Perturbation \\ \scriptsize critical path / random};
+\node[orange, below=of pert] (ils) {Iterated \\ \scriptsize Local Search};
+
+% Stage 3: SA
+\node[green, below=of ls] (sa) {Simulated \\ \scriptsize Annealing};
+
+% Stage 4: TS
+\node[red, below=of sa] (ts) {Tabu Search \\ \scriptsize (mk09/10/15)};
+
+% Output
+\node[box, right=of ils] (out) {Best schedule \\ \scriptsize + makespan};
+
+% Arrows
+\draw[arrow] (inst) -- (env);
+\draw[arrow] (env) -- (pa);
+\draw[arrow] (pa) -- (sched);
+\draw[arrow] (sched) -- (ls);
+\draw[arrow] (ls) -- (pert);
+\draw[arrow] (pert) -- (ils);
+\draw[arrow] (ils) -- (out);
+\draw[arrow] (ls) -- (sa);
+\draw[arrow] (sa) -- (ils);
+\draw[arrow] (sa) -- (ts);
+\draw[arrow] (ts) -- (ils);
+
+% Stage labels (background)
+\begin{scope}[on background layer]
+  \node[draw=blue!30, dashed, rounded corners=4pt, fit=(inst) (pa),
+        label={[blue!60!black]above:\textbf{Stage 1: RL}}] {};
+  \node[draw=orange!50, dashed, rounded corners=4pt, fit=(sched) (pert),
+        label={[orange!80!black]right:\textbf{Stage 2: ILS}}] {};
+  \node[draw=ForestGreen!50, dashed, rounded corners=4pt, fit=(sa),
+        label={[ForestGreen!70!black]right:\textbf{Stage 3: SA}}] {};
+  \node[draw=red!50, dashed, rounded corners=4pt, fit=(ts),
+        label={[red!70!black]right:\textbf{Stage 4: TS}}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{Pipeline overview. Stage 1 trains a per-action REINFORCE
+policy and rolls out a greedy schedule. Stage 2 applies iterated
+local search (ILS) with four neighborhood classes
+($N_1$--$N_4$) and critical-path / random perturbations. Stage 3
+applies simulated annealing (SA) on the ILS output. Stage 4
+applies tabu search (TS) on the three largest instances
+(MK09, MK10, MK15). The output is a single best schedule and
+its makespan.}
+\label{fig:pipeline}
+\end{figure}
+
 % =============================================================================
 \section{Experimental Setup}
 % =============================================================================
@@ -833,6 +915,46 @@ MK15  & 50$\times$10 & 370 & 341 & 341 & $+29$ & \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+% -----------------------------------------------------------------------------
+% Visual results
+% -----------------------------------------------------------------------------
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/fig_sota_bar.pdf}
+\caption{Per-instance comparison on Brandimarte MK01--MK15.
+For each instance we plot the EF baseline, our
+PA-REINFORCE + ILS + SA + TS pipeline, and the literature
+best-known. The five right-most cells (MK09, MK10, MK13, MK14,
+MK15) are the largest instances; the four ``TIED'' cells
+(MK03, MK08, MK12, MK14) match the proven OR-Tools optima; the
+``SOTA'' cell (MK13) improves the previous best-known upper
+bound by 14 units.}
+\label{fig:sota-bar}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\begin{subfigure}[t]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{figures/fig_learning_curve.pdf}
+  \caption{Per-action REINFORCE learning curve on MK01,
+  5 seeds, 200 episodes. After $\sim$20 episodes all seeds
+  reach the same plateau (43), which is 1 unit above the EF
+  baseline of 57 and 3 units above the literature best (40).}
+  \label{fig:learning-curve}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.48\textwidth}
+  \includegraphics[width=\textwidth]{figures/fig_ablation.pdf}
+  \caption{Per-instance ablation. The four bars per instance
+  are: RL only, + ILS, + SA, + TS. ILS gives the largest single
+  drop on most instances; SA gives modest additional gains;
+  TS only improves the three largest instances
+  (MK09, MK10, MK15).}
+  \label{fig:ablation}
+\end{subfigure}
+\caption{Per-instance learning curve (left) and ablation (right).}
+\label{fig:learning-and-ablation}
+\end{figure}
 
 % =============================================================================
 \section{Lessons Learned}
