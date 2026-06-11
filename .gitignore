@@ -5,9 +5,32 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
-data/results/*.json
+# Generated result JSON files (raw/seeded/auxiliary) - ignored
+data/results/bench_*.json
+data/results/eval_*.json
+data/results/reinforce_*5seed.json
+data/results/reinforce_*5seeds.json
+data/results/a2c_*.json
+data/results/actor_critic_*.json
+data/results/graph_actor_critic_*.json
+data/results/graph_ppo_*.json
+data/results/bc_*.json
+data/results/hgt_*.json
+data/results/per_action_*.json
+data/results/sweep_*.json
+data/results/tmp_*.json
+# Trained model weights
 data/results/*.pt
 data/results/*.pth
+# Logs
 experiments/logs/*
-!experiments/logs/.gitkeep
+# Keep: SOTA schedules, audit logs, validation reports
 !data/results/.gitkeep
+!data/results/sota_mk*_schedule.json
+!data/results/sota_schedule_validation*.json
+!data/results/sota_final.json
+!data/results/sota_reinforce_ils.json
+!data/results/aggressive_ils_hard.json
+!data/results/tabu_results.json
+!data/results/rl_history_mk01.json
+!experiments/logs/.gitkeep
