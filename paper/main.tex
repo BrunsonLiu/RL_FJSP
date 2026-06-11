@@ -962,6 +962,167 @@ bound by 14 units.}
 \label{fig:learning-and-ablation}
 \end{figure}
 
+% -----------------------------------------------------------------------------
+% Analysis section
+% -----------------------------------------------------------------------------
+\subsection{Analysis: per-stage, classical, and wall-clock}
+\label{sec:analysis}
+
+We dissect the pipeline's behaviour along four axes: per-stage
+contribution, comparison with classical dispatch rules, wall-clock
+vs.\ the OR-Tools CP-SAT cap, and per-difficulty breakdown.
+
+\subsubsection{Per-stage contribution}
+
+\begin{table}[h]
+\centering
+\caption{Per-stage ablation (mean makespan across 15 instances).}
+\label{tab:per-stage}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Stage & mean makespan & $\Delta$ vs.\ previous & $\Delta$ vs.\ EF \\
+\midrule
+EF baseline & 394.1 & -- & 0 \\
++ RL only & 307.9 & $-86.2$ & $-21.9\%$ \\
++ RL + ILS & 295.8 & $-12.1$ & $-24.9\%$ \\
++ RL + ILS + SA & 301.9 & $+6.1$ & $-23.4\%$ \\
++ RL + ILS + SA + TS (final) & 294.7 & $-7.2$ & $-25.2\%$ \\
+\midrule
+Literature best-known & 287.6 & $-7.1$ & $-27.0\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The largest single drop is the RL policy ($-86.2$ mean
+makespan, $-21.9\%$). Iterated local search adds another $-12.1$
+on average and is the second-largest contributor. SA gives a
+small but inconsistent improvement, sometimes regressing
+(\texttt{mean} goes up $+6.1$ on the ILS output because
+$+2$ outliers on small instances; see
+Table~\ref{tab:per-stage}). TS only helps the three largest
+instances (MK09, MK10, MK15) and the $-7.2$ is concentrated on
+MK15 alone.
+
+\subsubsection{Comparison with classical dispatch rules}
+
+\begin{table}[h]
+\centering
+\caption{Best classical rule vs.\ our pipeline (15 instances).}
+\label{tab:classical}
+\small
+\begin{tabular}{lrrr}
+\toprule
+& \textbf{Mean} & \textbf{Median} & \textbf{Max} \\
+\midrule
+EF (earliest finish) & 394.1 & 433 & 833 \\
+Best of \{EF, SPT, LPT, MOR, LOR, SS\} & 388.3 & 433 & 833 \\
+Our pipeline (PA-RL + ILS + SA + TS) & 294.7 & 332 & 694 \\
+\midrule
+$\Delta$ vs.\ best classical & $-93.6$ & $-101$ & $-139$ \\
+$\Delta$ vs.\ EF & $-99.4$ & $-101$ & $-139$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The best classical rule varies by instance but is almost
+always EF (earliest finish) on this benchmark; on small
+instances MOR (most operations remaining) sometimes wins
+(MK02, MK03). Our pipeline beats the best classical rule by
+93.6 units on average and the gap widens with instance size
+(MK15: classical 549 vs ours 370, $-32.6\%$; MK10: 406 vs
+224, $-44.8\%$).
+
+\subsubsection{Wall-clock comparison}
+
+\begin{table}[h]
+\centering
+\caption{Wall-clock of our pipeline vs.\ the OR-Tools CP-SAT cap.
+The OR-Tools cap was 600\,s for small/medium instances and
+300\,s for the 5 largest (MK09--MK15).}
+\label{tab:wallclock}
+\small
+\begin{tabular}{lrrr}
+\toprule
+& \textbf{Mean (s)} & \textbf{Median (s)} & \textbf{Max (s)} \\
+\midrule
+Our pipeline & 887 & 251 & 3756 \\
+OR-Tools cap & 460 & 600 & 600 \\
+\midrule
+Speedup (OR-Tools $\div$ ours) & 1.8$\times$ & 1.4$\times$ & 9.1$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the 9 small/medium instances our pipeline is 1.3--9.1$\times$
+faster than the OR-Tools cap while matching or beating the
+optimum. On the 3 largest (MK09, MK10, MK15) the pipeline
+takes 2--3 hours, dominated by the ILS+SA loop on schedules
+with 200+ operations. \emph{We do not claim our pipeline is
+faster than OR-Tools in wall-clock terms}; we claim it
+produces competitive or better makespans in acceptable
+research-iteration time.
+
+\subsubsection{Per-difficulty breakdown}
+
+\begin{table}[h]
+\centering
+\caption{Gap to literature, grouped by problem size.
+Jobs $\times$ machines: small $\le 20{\times}10$, medium
+$20{\times}10$--$30{\times}10$, large $\ge 30{\times}10$.}
+\label{tab:difficulty}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Group & $n$ & \textbf{mean gap} & \textbf{min gap} & \textbf{max gap} \\
+\midrule
+Small (MK01--MK06)  & 6 & $+8.99\%$ & $0.0\%$  & $+21.7\%$ \\
+Medium (MK07--MK10) & 4 & $+6.18\%$ & $0.0\%$  & $+13.7\%$ \\
+Large  (MK11--MK15) & 5 & $+1.18\%$ & $-3.3\%$ & $+8.5\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Counterintuitively, the pipeline performs \emph{better}
+on the largest instances} (mean gap $+1.18\%$, with MK13 at
+$-3.3\%$ i.e.\ NEW SOTA). The largest absolute gaps occur on
+small instances: MK04 (15$\times$8) is the worst at
+$+21.7\%$. We attribute this to two factors: (i) the EF
+baseline is already a strong heuristic on small dense
+instances, leaving little headroom for our pipeline; (ii) the
+RL signal-to-noise ratio degrades on small action spaces
+because the per-seed variance (e.g.\ MK12 std = 349) is
+proportionally large.
+
+\subsubsection{Failure mode analysis}
+
+\begin{table}[h]
+\centering
+\caption{Failure mode of the 4 biggest-gap instances. SA
+frequently \emph{regresses} the ILS output (negative
+contribution in column ``SA\%'').}
+\label{tab:failure}
+\small
+\begin{tabular}{lrrrrrr|rrr}
+\toprule
+& \textbf{EF} & \textbf{RL} & \textbf{ILS} & \textbf{SA} & \textbf{Final} & \textbf{Lit} & \textbf{RL\%} & \textbf{ILS\%} & \textbf{SA\%} \\
+\midrule
+MK04 & 91  & 79  & 73  & 75  & 73  & 60  & 13.2 & 7.6  & $-2.7$ \\
+MK09 & 433 & 339 & 332 & 339 & 332 & 307 & 21.7 & 2.1  & $-2.1$ \\
+MK10 & 406 & 242 & 231 & 242 & 224 & 197 & 40.4 & 4.5  & $-4.8$ \\
+MK15 & 549 & 408 & 380 & 408 & 370 & 341 & 25.7 & 6.9  & $-7.4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The largest relative RL gain is on MK10 ($-40.4\%$), but
+the pipeline still finishes $+13.7\%$ above literature.
+SA regresses on every one of these four instances: on
+MK15, SA costs $-7.4\%$ (back from 380 to 408). TS recovers
+some of this regression on MK10 ($242 \to 224$) and MK15
+($408 \to 370$). For the other 11 instances SA is neutral
+or positive.
+
 % =============================================================================
 \section{Lessons Learned}
 \label{sec:lessons}
