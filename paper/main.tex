@@ -887,8 +887,14 @@ and the literature best-known upper bound.
 \centering
 \caption{Brandimarte MK01--MK15: combined pipeline (PA-REINFORCE
 + ILS + SA + TS) vs. OR-Tools CP-SAT and literature best-known.
-\textbf{NEW SOTA} on MK13; \textbf{TIED OPT} on MK03, MK08, MK12,
-MK14. Mean gap to literature = 5.64\%.}
+\textbf{NEW SOTA} on MK13 ($-$14 vs previous best 430);
+\textbf{TIED OPT} on MK03, MK08, MK14 (3 proven optima saved to
+disk and independently re-validated by
+\texttt{scripts/validate\_schedule.py}). MK12 is the only
+TIED-OPT case that did not reproduce under the simpler pipeline
+in this paper's re-validation; we report 524 (gap +16) and
+acknowledge the result in \S\ref{sec:lessons}. Mean gap to
+literature = 5.71\%.}
 \label{tab:sota-matrix}
 \small
 \begin{tabular}{lrrrrrl}
@@ -906,12 +912,12 @@ MK08  & 20$\times$5  & \textbf{523}  & 523  & 523 & 0  & \textbf{TIED} \\
 MK09  & 20$\times$10 & 332 & 307 & 307 & $+25$ & \\
 MK10  & 20$\times$10 & 224 & 199 & 197 & $+27$ & \\
 MK11  & 30$\times$5  & 619 & 615 & 615 & $+4$  & \\
-MK12  & 30$\times$8  & \textbf{508}  & 508  & 508 & 0  & \textbf{TIED} \\
+MK12  & 30$\times$8  & 524  & 508  & 508 & $+16$ & (re-validated) \\
 MK13  & 30$\times$10 & \textbf{416}  & 416  & 430 & $\mathbf{-14}$  & \textbf{NEW SOTA} \\
 MK14  & 30$\times$10 & \textbf{694}  & 694  & 694 & 0  & \textbf{TIED} \\
 MK15  & 50$\times$10 & 370 & 341 & 341 & $+29$ & \\
 \midrule
-\multicolumn{5}{l}{Total $\Delta$ = 106, mean = 5.64\%} & & \\
+\multicolumn{5}{l}{Total $\Delta$ = 122, mean = 5.71\%} & & \\
 \bottomrule
 \end{tabular}
 \end{table}
