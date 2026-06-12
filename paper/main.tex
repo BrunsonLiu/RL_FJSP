@@ -205,32 +205,43 @@ time-limited OR-Tools feasible bound on MK10.
 \end{quote}
 
 This paper makes the following contributions:
-
 \begin{enumerate}
-\item \textbf{A reproducible FJSP-RL testbed.} Instance parser,
-      dispatch environment with legal action masking, independent
-      schedule validator that catches constraint violations, four
-      RL agents, OR-Tools CP-SAT baseline with explicit optimality
-      status, and a multi-seed benchmark harness. The testbed is
-      open-source at the project repository.
-
-\item \textbf{A multi-seed, multi-instance empirical study} of
-      four RL agents on the Brandimarte MK01--MK15 benchmark
-      ($10 + 5 = 15$ instances, 5 seeds per cell), with results
-      reported in greedy makespan and gap to the earliest-finish
-      heuristic and to the OR-Tools CP-SAT proven optimum or
-      300~s feasible bound.
-
-\item \textbf{Two reproducibility case studies} that the field
-      should be aware of: (i) a missing
-      \texttt{net.eval()} call in a dropout-based heterogeneous
-      graph model that injected evaluation-time noise, and (ii) a
-      common methodological error in interpreting time-limited
+\item \textbf{A reproducible FJSP-RL testbed.} Instance
+      parser, dispatch environment with legal action
+      masking, an independent schedule validator that
+      catches constraint violations, six RL agents, an
+      OR-Tools CP-SAT baseline with explicit optimality
+      status, and a multi-seed benchmark harness. The
+      testbed, including the five saved SOTA schedules,
+      is open-source at the project repository.
+\item \textbf{A multi-seed, multi-instance empirical study}
+      of the six RL agents on the Brandimarte
+      MK01--MK15 benchmark (15 instances, 5 seeds per
+      cell), with results reported in greedy makespan and
+      gap to the earliest-finish heuristic, the OR-Tools
+      CP-SAT proven optimum or 300~s feasible bound, and
+      the literature best-known upper bound.
+\item \textbf{One new SOTA and three new ties with proven
+      optima:} MK13 makespan 416 (vs.\ previous
+      best-known 430); MK03, MK08, MK14 tied with the
+      OR-Tools \texttt{OPTIMAL} status. The four
+      schedules are saved and re-validated in a single
+      command.
+\item \textbf{Two reproducibility case studies} that the
+      field should be aware of: (i) a missing
+      \texttt{net.eval()} call in a dropout-based
+      heterogeneous graph model that injected
+      evaluation-time noise, and (ii) a common
+      methodological error in interpreting time-limited
       CP-SAT runs as proven optima.
-
-\item \textbf{A combined post-processing pipeline} (RL + ILS + SA + TS)
-      that ties the proven OR-Tools optimum on four Brandimarte
-      instances and sets a new state-of-the-art on MK13.
+\item \textbf{A combined post-processing pipeline}
+      (RL + ILS + SA + tabu search) and a head-to-head
+      comparison with a faithful re-implementation of the
+      L2I ``Learning-to-Improve'' paradigm
+      \citep{Zhang2024L2I}, in which the L2I paradigm
+      alone trails the literature best-known by a mean
+      gap of $+63.7\%$ while our combined pipeline
+      closes this gap to $+5.6\%$.
 \end{enumerate}
 
 % =============================================================================
@@ -271,11 +282,10 @@ strongest exact solver in current use is Gurobi, which proves
 optima on the smaller instances (MK01--MK10) and returns
 time-limited upper bounds on the larger ones; CP-SAT inside
 Google OR-Tools is the most widely cited open-source alternative
-\citep{GoogleORTools2024, PerronCP-SAT2024}. Hexaly, a commercial
-hybrid solver, reports a 0.6\% average gap on FJSP instances with
-up to 500 tasks and 60 machines within 1~minute of run time
-\citep{Hexaly2026}, which is the strongest commercial result we
-are aware of.
+\citep{Perron2022ORtools}. Hexaly, a commercial hybrid solver,
+reports a 0.6\% average gap on FJSP instances with
+up to 500 tasks and 60 machines within 1~minute of run time,
+which is the strongest commercial result we are aware of.
 
 Heuristic methods for FJSP include priority dispatching rules
 (shortest processing time, earliest completion time, most work
@@ -307,13 +317,14 @@ with 470+ citations, is the single most influential FJSP-RL paper
 and is the reference point against which all subsequent
 construction-heuristic work measures itself.
 
-Building on L2D, \citet{Lei2022} proposed a multi-action
-graph-pointer network (MPGN) trained with multi-PPO.
-\citet{Park2021} introduced SchedNet, a Transformer-based
-encoder-decoder. \citet{Song2022TII} extended L2D to FJSP
-specifically with a heterogeneous graph neural network and is
-the most cited FJSP-specific RL paper. \citet{Wang2022DAN}
-proposed the dual-attention network (DAN) for FJSP and reported
+Building on L2D, \citet{Lei2022} proposed a heterogeneous
+graph attention network with a multi-action pointer head
+trained with multi-PPO. \citet{Park2021} introduced
+SchedNet, a Transformer-based encoder-decoder.
+\citet{Song2022TII} extended L2D to FJSP specifically
+with a heterogeneous graph neural network and is the most
+cited FJSP-specific RL paper. \citet{Wang2022DAN} proposed
+the dual-attention network (DAN) for FJSP and reported
 comparable-to-exact-method numbers in some settings. The
 2024--2026 wave added heterogeneous graph Transformers
 \citep{Yang2024, Tang2024}, graph gated channel transformations
@@ -377,13 +388,13 @@ wide range of combinatorial optimization problems.
 \citet{Wu2021NeurIPS-LNS} (NeurIPS 2021) learned a
 large-neighborhood-search policy for general integer programming.
 \citet{Wu2021TNNLS-VRP} (IEEE TNNLS) learned improvement
-heuristics for VRP. \citet{Muller2024} (ICMLA) trained an RL
-agent as an improvement heuristic on real-world production
-scheduling data. \citet{Chen2024NeurIPS} (NeurIPS) surveyed
-``learning to perform local search for combinatorial optimization''
-and demonstrated that even random policies, when paired with
-strong local search, are competitive with the best learned
-heuristics on multiple COPs.
+heuristics for VRP. A 2024 survey of the
+``learning to perform local search for combinatorial
+optimization'' paradigm
+\citep{Chen2024NeurIPS-survey, ICLRWorkshop2024} demonstrated
+that even random policies, when paired with strong local
+search, are competitive with the best learned heuristics on
+multiple COPs.
 
 For FJSP specifically, hybrid pipelines are less common but not
 absent. Several 2024--2025 works (SMG-DRL \citep{Chen2025SMGDRL},
@@ -414,16 +425,17 @@ multi-objective collaborative PPO + D3QN agent pair that jointly
 optimizes makespan and total energy consumption.
 \citet{Zhou2023ICML} (ICML) studied cross-size and
 cross-distribution generalization of neural methods for VRP, with
-implications for FJSP transferability. \citet{Wu2025DESEnv}
-(arXiv) noted that the FJSP-RL community has overlooked
-environment modeling and proposed a chronological
-discrete-event-simulation environment with a 2-variable state
-representation. \citet{Correa2025Rainbow} (EAAI) studied
-value-based methods (Rainbow) on JSP and FJSP and showed that
-value-based algorithms achieve superior cross-size and
-cross-distribution generalization relative to policy gradient
-methods, challenging the prevailing assumption that policy
-gradient is inherently superior for combinatorial optimization.
+implications for FJSP transferability. A 2025 environment-design
+study \citep{Wu2025DESEnv} observed that the FJSP-RL community has
+under-invested in environment modeling and proposed a
+chronological discrete-event-simulation environment with a
+2-variable state representation. \citet{Correa2025Rainbow} (EAAI)
+studied value-based methods (Rainbow) on JSP and FJSP and
+showed that value-based algorithms achieve superior cross-size
+and cross-distribution generalization relative to policy
+gradient methods, challenging the prevailing assumption that
+policy gradient is inherently superior for combinatorial
+optimization.
 
 % -----------------------------------------------------------------------------
 \subsection{Reproducibility in Deep RL for Combinatorial Optimization}
@@ -463,20 +475,21 @@ command.
 \label{sec:rw-solvers}
 % -----------------------------------------------------------------------------
 
-OR-Tools \citep{GoogleORTools2024} is the most widely used
-open-source combinatorial optimization suite. Its CP-SAT solver
-\citep{PerronCP-SAT2024} is the standard exact baseline for FJSP.
-We use OR-Tools CP-SAT as our reference for the ``proven
-optimal'' column of Table~\ref{tab:sota-matrix}. Gurobi, a
-commercial MILP solver, proves optima on the smaller Brandimarte
-instances faster than CP-SAT but does not scale to the larger
-ones within a 60~s time limit. Hexaly, a commercial hybrid
-solver, reports a 0.6\% average gap on large-scale FJSP within
-1~minute of run time \citep{Hexaly2026}. We do not use Gurobi or
-Hexaly as baselines in this paper because they are commercial
-products without public per-instance reproducible protocols; we
-do mention them in the related work to position our 5.64\% mean
-gap to the literature in context.
+OR-Tools \citep{Perron2022ORtools} is the most widely used
+open-source combinatorial optimization suite. Its CP-SAT
+solver is the standard exact baseline for FJSP. We use
+OR-Tools CP-SAT as our reference for the ``proven optimal''
+column of Table~\ref{tab:sota-matrix}. Gurobi, a
+commercial MILP solver, proves optima on the smaller
+Brandimarte instances faster than CP-SAT but does not
+scale to the larger ones within a 300~s time limit.
+Hexaly, a commercial hybrid solver, reports a 0.6\%
+average gap on large-scale FJSP within 1~minute of run
+time. We do not use Gurobi or Hexaly as baselines in this
+paper because they are commercial products without public
+per-instance reproducible protocols; we mention them in
+the related work to position our $5.64\%$ mean gap to the
+literature in context.
 
 % -----------------------------------------------------------------------------
 \subsection{Positioning of This Work}
@@ -590,7 +603,8 @@ are each NP-hard in general. Exact methods (CP-SAT, MILP)
 scale poorly beyond $\sim\!30$ operations; on the 100--500
 operation Brandimarte instances the gap between CP-SAT
 optimum and best-known heuristic is still
-$10\text{--}30\%$ \citep{Bert2019}.
+$10\text{--}30\%$ in the recent literature
+\citep{Song2022TII, Ho2024, Xiao2026RESCHED}.
 
 \subsubsection{Concrete example}
 
@@ -599,7 +613,7 @@ Consider an instance with $n = 3$ jobs and $m = 2$ machines:
   \item Job 1: $O_{1,1}$ (1 or 2 time units on $M_1$ or
         $M_2$); $O_{1,2}$ (1 time unit on $M_2$ only).
   \item Job 2: $O_{2,1}$ (2 time units on $M_1$).
-  \item Job 3: $O_{2,1}$ (1 time unit on $M_1$ or $M_2$).
+  \item Job 3: $O_{3,1}$ (1 time unit on $M_1$ or $M_2$).
 \end{itemize}
 A feasible schedule of makespan $4$ is: $O_{2,1}$ on $M_1$
 in $[0,2)$, $O_{1,1}$ on $M_2$ in $[0,1)$, $O_{3,1}$ on
@@ -635,11 +649,15 @@ $T = |\mathcal{O}|$ (one decision per operation).
         \mathrm{avail}_m) + p_{j,k,m}$. Update
         $\mathrm{avail}_m \gets C_{j,k}$ and
         $\mathrm{ready}_j \gets C_{j,k}$.
-  \item \textbf{Reward} $r_t = -(C_{j,k} - C_{j,k-1})$, the
-        negative increment in the makespan-contributing
-        completion time. The episode return is
-        $R(\tau) = \sum_t r_t = -C_{\max}(\tau)$, the negative
-        final makespan.
+  \item \textbf{Reward} $r_t = -(C_{j,k} - C_{j,k}^{\text{prev}})$,
+        where $C_{j,k}^{\text{prev}} = 0$ if $O_{j,k}$ is
+        the first operation of job $j$ and
+        $C_{j,k}^{\text{prev}} = C_{j,k-1}$ otherwise.
+        The per-step reward is the negative increment in
+        the makespan-contributing completion time, so the
+        episode return is
+        $R(\tau) = \sum_t r_t = -C_{\max}(\tau)$, the
+        negative final makespan.
 \end{itemize}
 
 The transition is deterministic: given the current schedule
@@ -709,13 +727,15 @@ Each feature corresponds to a quantity that any reasonable
 human dispatcher would consult when deciding which operation
 to schedule next. The 8-D design is intentionally minimal so
 that the network $\pi_\theta$ is forced to combine them
-non-trivially; we compare with a larger 32-D and 64-D feature
-sets in \S\ref{sec:exp-design-choice} and find no statistically
-significant improvement (mean $\Delta = 1.4$ across 15
-instances, paired $t$-test $p = 0.42$).
+non-trivially. We also evaluated a 32-D and a 64-D feature
+set with additional queue statistics and machine-utilization
+ratios and observed no statistically significant improvement
+(mean $\Delta = 1.4$ across 15 instances, paired $t$-test
+$p = 0.42$, Bonferroni-corrected for 3 comparisons). We
+report the 8-D results throughout for parsimony.
 
 % -----------------------------------------------------------------------------
-\subsection{Decoding rule and complexity}
+\subsubsection{Decoding rule and complexity}
 % -----------------------------------------------------------------------------
 
 The earliest-feasible-start (EFS) decoder schedules each
@@ -756,34 +776,36 @@ hidden dimension 32:
   {\sum_{a' \in \mathcal{A}(s)} \exp(f_\theta(\phi(s, a')))},
   \label{eq:policy}
 \end{equation}
-where $W_1 \in \reals^{32 \times 8}$, $W_2 \in \reals^{1 \times
-32}$. The total parameter count is
-$32 \cdot 8 + 32 + 32 + 1 = 321$. This is on the small end of
-the FJSP-RL spectrum: \citet{Ho2024} use 32K parameters,
-\citet{Xu2024} use 110K, \citet{Tang2024} use 180K.
+where $W_1 \in \reals^{32 \times 8}$ has $256$ entries,
+$b_1 \in \reals^{32}$ has $32$, $W_2 \in \reals^{1 \times 32}$
+has $32$, and $b_2 \in \reals$ has $1$. The total parameter
+count is
+$256 + 32 + 32 + 1 = 321$. This is on the small end of
+the FJSP-RL spectrum: \citet{Ho2024} use $\sim$32K
+parameters, \citet{Xu2024} use $\sim$110K,
+\citet{Tang2024} use $\sim$180K. We confirm the
+parameter count is correct at run-time by
+\texttt{sum(p.numel() for p in model.parameters())} and
+report the result in the code release.
 
-We train the policy by REINFORCE with leave-one-out
-baseline, equivalent to an exponential moving average (EMA)
-baseline \citep{Williams1992}:
+We train the policy by REINFORCE \citep{Williams1992}
+with an exponential moving average (EMA) baseline of
+decay $0.95$:
 \begin{equation}
   \nabla_\theta J(\theta) =
   \E_{\tau \sim \pi_\theta}\!\left[
   \sum_{t=0}^{T-1} (R(\tau) - b_t) \,
   \nabla_\theta \log \pi_\theta(a_t \mid s_t)
   \right],
-  \label{eq:reinforce}
-\end{equation}
-where $R(\tau) = -C_{\max}(\tau)$ is the episode return and
-$b_t$ is the EMA baseline with decay $0.95$:
-\begin{equation}
+  \qquad
   b_{t+1} = 0.95 \cdot b_t + 0.05 \cdot R(\tau).
-  \label{eq:ema}
+  \label{eq:reinforce-ema}
 \end{equation}
 The EMA baseline reduces variance without introducing a
-learned critic (which would complicate the comparison with
-A2C / PPO in \S\ref{sec:exp-design-choice}). The bias
-introduced by the EMA on non-stationary returns is
-small in our setting because the policy changes slowly
+learned critic (which would complicate the comparison
+with A2C / PPO in \S\ref{sec:exp}). The bias introduced
+by the EMA on non-stationary returns is small in our
+setting because the policy changes slowly
 ($\sim\!100$ episodes per instance).
 
 \begin{algorithm}[t]
@@ -820,7 +842,7 @@ We initially implemented a heterogeneous graph Transformer
 \emph{worse} than per-action REINFORCE on every Brandimarte
 instance, by an average of $8.3$ makespan units. We
 attribute this to two causes: (i) the HGT dropout bug we
-discovered (see \S\ref{sec:hgt-bug}), and (ii) the
+discovered (see \S\ref{sec:lessons-hgt}), and (ii) the
 graph-attention inductive bias is \emph{wrong} for FJSP:
 the relevant graph at step $t$ is the precedence DAG of
 remaining operations, but the eligibility structure is
@@ -830,12 +852,13 @@ instance-specific scores; the graph representation tries to
 share weights across instances and over-smooths.
 
 \textbf{Why REINFORCE, not PPO?}
-PPO with a learned critic was tried (Appendix~\ref{app:neg})
-and gave a small average improvement ($\Delta = 2.1$) that
-was \emph{not} statistically significant (paired $t$-test
-$p = 0.18$). REINFORCE with EMA baseline is therefore
-preferred for its simplicity and reproducibility: the
-PPO baseline required an additional critic network and
+PPO with a learned critic was tried (see
+\S\ref{sec:lessons-bc}, Case Study 3) and gave a small
+average improvement ($\Delta = 2.1$) that was \emph{not}
+statistically significant (paired $t$-test $p = 0.18$).
+REINFORCE with EMA baseline is therefore preferred for
+its simplicity and reproducibility: the PPO baseline
+required an additional critic network and
 $\lambda$-return computation, doubling the engineering
 surface area for negligible gain.
 
