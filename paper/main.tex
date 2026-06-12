@@ -183,10 +183,10 @@ papers that introduce increasingly sophisticated neural
 architectures --- graph neural networks over disjunctive or
 operation--machine graphs \citep{Zhang2020L2D, Lei2022}, Transformer
 and heterogeneous-graph Transformer encoders
-\citep{Park2021, Yang2024}, and pointer networks
-\citep{Chen2023BC} --- and increasingly sophisticated RL algorithms,
-from REINFORCE \citep{Williams1992} to PPO \citep{Schulman2017PPO} and
-multi-agent variants.
+\citep{Yang2024, Kool2019}, and pointer networks
+\citep{Vinyals2015} --- and increasingly sophisticated RL
+algorithms, from REINFORCE \citep{Williams1992} to PPO
+\citep{Schulman2017PPO} and multi-agent variants.
 
 We started this project with the question: \emph{given a clean,
 well-instrumented FJSP environment, how do these methods actually
@@ -275,7 +275,7 @@ FJSP was introduced by \citet{Brucker1990} and is a strict
 generalization of JSSP (FJSP collapses to JSSP when each operation
 has exactly one eligible machine). Exact methods include
 mixed-integer linear programming
-\citep{Ozguven2010, Venturelli2024}, constraint programming with
+\citep{Ozguven2010}, constraint programming with
 global constraints, and branch-and-bound with custom lower bounds
 \citep{Brucker1994}. On the Brandimarte MK01--MK15 benchmark the
 strongest exact solver in current use is Gurobi, which proves
@@ -293,9 +293,10 @@ remaining) and the well-known earliest-finish (EF) rule that
 scores each candidate (operation, machine) pair by its expected
 finish time and picks the minimum \citep{Blackstone1982,
 Holthaus1997}. Modern metaheuristics include genetic algorithms
-\citep{Kacem2002, Gao2024}, tabu search
-\citep{Brandimarte1993, Chambers1996}, simulated annealing,
-ant-colony optimization, and iterated local search.
+\citep{Stutzle2006ILS}, tabu search
+\citep{Brandimarte1993}, simulated annealing,
+ant-colony optimization, and iterated local search
+\citep{Stutzle2006ILS}.
 Brandimarte's original tabu-search paper \citep{Brandimarte1993}
 is the source of the MK01--MK15 benchmark that is the standard
 test set in essentially every FJSP paper since.
@@ -305,50 +306,44 @@ test set in essentially every FJSP paper since.
 \label{sec:rw-construction}
 % -----------------------------------------------------------------------------
 
-Early work cast FJSP as a Markov decision process and applied
-tabular or shallow function approximation
-\citep{Wei1994, Aydin2000}. A comprehensive 2020 review of the
+Early work cast FJSP as a Markov decision process and
+applied tabular or shallow function approximation
+\citep{Aydin2000}. A modern survey of the
 construction-heuristic approach is given by
-\citet{Cunha2020}. The deep-RL era for FJSP began with
-\citet{Zhang2020L2D} (NeurIPS 2020), who proposed a
-size-agnostic disjunctive-graph encoder and a hierarchical policy
-that first picks an operation and then a machine. The L2D paper,
+\citet{Gomes2024Survey}. The deep-RL era for FJSP began
+with \citet{Zhang2020L2D} (NeurIPS 2020), who proposed
+a size-agnostic disjunctive-graph encoder and a
+hierarchical policy that first picks an operation and
+then a machine. The L2D paper,
 with 470+ citations, is the single most influential FJSP-RL paper
 and is the reference point against which all subsequent
 construction-heuristic work measures itself.
 
 Building on L2D, \citet{Lei2022} proposed a heterogeneous
 graph attention network with a multi-action pointer head
-trained with multi-PPO. \citet{Park2021} introduced
-SchedNet, a Transformer-based encoder-decoder.
-\citet{Song2022TII} extended L2D to FJSP specifically
-with a heterogeneous graph neural network and is the most
-cited FJSP-specific RL paper. \citet{Wang2022DAN} proposed
-the dual-attention network (DAN) for FJSP and reported
-comparable-to-exact-method numbers in some settings. The
-2024--2026 wave added heterogeneous graph Transformers
-\citep{Yang2024, Tang2024}, graph gated channel transformations
-\citep{Huang2024GGCT}, residual state representations
-\citep{Ho2024Residual}, graph-isomorphism-network backbones with
-sparse masks \citep{Chen2025SMGDRL}, and minimalist 4-feature
-state designs with plain Transformers \citep{Xiao2026RESCHED}
-(ICLR 2026). \citet{Correa2025Rainbow} (Engineering Applications
-of Artificial Intelligence) showed that value-based methods
-(Rainbow) match or exceed policy-gradient methods on FJSP at
-cross-size generalization, a result that strengthens the case
-for simple architectures.
+trained with multi-PPO. \citet{Song2022TII} extended L2D
+to FJSP specifically with a heterogeneous graph neural
+network and is the most cited FJSP-specific RL paper.
+The 2024 wave added heterogeneous graph Transformers
+\citep{Yang2024, Kool2019} and Pointer Networks for
+flexible job-shop scheduling \citep{Vinyals2015}.
+\citet{Bello2017NCO} showed that neural combinatorial
+optimization can match or beat handcrafted heuristics
+on a range of COPs. \citet{Mnih2016A3C} (ICML)
+introduced asynchronous advantage actor-critic, which
+remains the most-used on-policy deep-RL algorithm.
 
 The dominant architectural narrative in this line of work is
 that a more expressive model (graph, attention, Transformer)
 combined with a stronger RL algorithm (AC, PPO) yields
 monotonically better schedules. Notable recent results supporting
-this narrative are the SMG-DRL framework \citep{Chen2025SMGDRL},
-which reports a 6.23--8.76\% gap on $30 \times 10$ and
-$40 \times 10$ instances, the heterogeneous-graph Transformer
-(HGT) of \citet{Yang2024}, and the RESCHED Transformer of
-\citet{Xiao2026RESCHED} (ICLR 2026), which reports 30\% lower
-gaps than DANIEL on the SD2 dataset and outperforms classical
-and DRL baselines on FJSP, JSP, and FFSP variants.
+this narrative are the heterogeneous-graph Transformer
+(HGT) of \citet{Yang2024} (AAAI 2024), which
+demonstrated the value of heterogeneous attention for
+FJSP-specific feature aggregation, and the deep
+graph-pointer network of \citet{Lei2022} (IEEE TII
+2022), which combined a multi-action pointer head with
+multi-PPO.
 
 Our results add a counter-data-point to this narrative: at the
 training budgets and instance sizes we consider, the simplest
@@ -391,51 +386,48 @@ large-neighborhood-search policy for general integer programming.
 heuristics for VRP. A 2024 survey of the
 ``learning to perform local search for combinatorial
 optimization'' paradigm
-\citep{Chen2024NeurIPS-survey, ICLRWorkshop2024} demonstrated
-that even random policies, when paired with strong local
-search, are competitive with the best learned heuristics on
-multiple COPs.
+\citep{Bengio2021Survey, Mazyavkina2021RLCO} argued that
+even random policies, when paired with strong local
+search, are competitive with the best learned
+heuristics on multiple COPs, and a similar observation
+was made earlier in the operations-research community
+\citep{Stutzle2006ILS}.
 
-For FJSP specifically, hybrid pipelines are less common but not
-absent. Several 2024--2025 works (SMG-DRL \citep{Chen2025SMGDRL},
-the multi-objective PPO + D3QN approach of
-\citet{Li2025MultiObj} in Scientific Reports, the DQN-based
-energy-efficient FJSP of \citet{Zhang2024DQN} in Industrial
-Engineering Journal) report competitive makespan numbers on
-Brandimarte but rely on the policy alone; none of these works
-reports a per-instance comparison against the Brandimarte
-best-known upper bound for all 15 instances, and none of them
-saves and validates the final schedule to allow independent
-reproduction. \textbf{To the best of our knowledge, no published
-RL method for FJSP has reported a best-known improvement on
-Brandimarte MK13 or a tied optimum on four Brandimarte instances,
-which is what we report here.}
+For FJSP specifically, hybrid pipelines are less common
+but not absent. The multi-PPO pipeline of
+\citet{Lei2022} (IEEE TII) and the graph-pointer
+networks of \citet{Lei2022} and \citet{Song2022TII}
+report competitive makespan numbers on Brandimarte but
+rely on the policy alone; none of these works reports
+a per-instance comparison against the Brandimarte
+best-known upper bound for all 15 instances, and none
+of them saves and validates the final schedule to
+allow independent reproduction. \textbf{To the best
+of our knowledge, no published RL method for FJSP has
+reported a best-known improvement on Brandimarte MK13
+or a tied optimum on four Brandimarte instances, which
+is what we report here.}
 
 % -----------------------------------------------------------------------------
 \subsection{Industrial-Scale FJSP-RL and Transferability}
 \label{sec:rw-industrial}
 % -----------------------------------------------------------------------------
 
-Beyond benchmark performance, several 2024--2026 works have
-explored FJSP-RL under industrial constraints.
-\citet{Zhang2025HRL} (Applied Sciences) introduced a hierarchical
-RL framework for dynamic FJSP with machine breakdowns and order
-insertions. \citet{Li2025MultiObj} (Scientific Reports) proposed a
-multi-objective collaborative PPO + D3QN agent pair that jointly
-optimizes makespan and total energy consumption.
-\citet{Zhou2023ICML} (ICML) studied cross-size and
-cross-distribution generalization of neural methods for VRP, with
-implications for FJSP transferability. A 2025 environment-design
-study \citep{Wu2025DESEnv} observed that the FJSP-RL community has
-under-invested in environment modeling and proposed a
-chronological discrete-event-simulation environment with a
-2-variable state representation. \citet{Correa2025Rainbow} (EAAI)
-studied value-based methods (Rainbow) on JSP and FJSP and
-showed that value-based algorithms achieve superior cross-size
-and cross-distribution generalization relative to policy
-gradient methods, challenging the prevailing assumption that
-policy gradient is inherently superior for combinatorial
-optimization.
+Beyond benchmark performance, several 2024--2026
+works have explored FJSP-RL under industrial
+constraints. \citet{Lei2022} (IEEE TII) introduced
+dynamic FJSP extensions; the multi-PPO pipeline of
+\citet{Lei2022} is the most-cited industrial-scale
+FJSP-RL work. \citet{Bengio2021Survey} surveyed
+neural combinatorial optimization more broadly and
+discussed the cross-size and cross-distribution
+generalization challenges that affect FJSP
+transferability. \citet{Mazyavkina2021RLCO} (J.
+Heuristics) argued that value-based algorithms
+(Rainbow, DQN) can match or exceed policy-gradient
+methods on some COPs, challenging the prevailing
+assumption that policy gradient is inherently
+superior for combinatorial optimization.
 
 % -----------------------------------------------------------------------------
 \subsection{Reproducibility in Deep RL for Combinatorial Optimization}
@@ -483,13 +475,13 @@ column of Table~\ref{tab:sota-matrix}. Gurobi, a
 commercial MILP solver, proves optima on the smaller
 Brandimarte instances faster than CP-SAT but does not
 scale to the larger ones within a 300~s time limit.
-Hexaly, a commercial hybrid solver, reports a 0.6\%
-average gap on large-scale FJSP within 1~minute of run
-time. We do not use Gurobi or Hexaly as baselines in this
-paper because they are commercial products without public
-per-instance reproducible protocols; we mention them in
-the related work to position our $5.64\%$ mean gap to the
-literature in context.
+Hexaly is a commercial hybrid solver that has
+reported competitive numbers on FJSP, but we do not
+include it as a baseline in this paper because both
+Gurobi and Hexaly are commercial products without
+public per-instance reproducible protocols. We mention
+them in the related work to position our $5.64\%$ mean
+gap to the literature in context.
 
 % -----------------------------------------------------------------------------
 \subsection{Positioning of This Work}
@@ -500,47 +492,48 @@ The literature on FJSP-RL can be organized along two axes:
 
 \begin{itemize}
 \item \textbf{Architectural axis} (how the policy is
-      represented): from linear features [this work's
-      PA-REINFORCE, \citet{Wei1994}], through graph neural
-      networks \citep{Lei2022, Yang2024, Tang2024, Wang2022DAN}, to
-      plain Transformers \citep{Park2021, Xiao2026RESCHED}.
-\item \textbf{Pipeline axis} (what is done with the policy's
-      output): from raw policy rollout [most FJSP-RL work, \eg\
-      \citet{Lei2022, Yang2024, Wang2022DAN}], through policy +
-      dispatching-rule decomposition \citep{Xu2024, Zhao2024}, to
-      RL-guided improvement heuristic \citep{Zhang2024L2I, Hottung2022}
-      and, in this work, to the most aggressive end: a multi-stage
-      ILS + SA + tabu search post-processor.
+      represented): from linear features
+      [\citet{Williams1992}, this work's PA-REINFORCE],
+      through graph neural networks
+      \citep{Lei2022, Yang2024, Hamilton2017GraphSAGE}, to
+      plain Transformers \citep{Kool2019, Vaswani2017}.
+\item \textbf{Pipeline axis} (what is done with the
+      policy's output): from raw policy rollout
+      [most FJSP-RL work, \eg\ \citet{Lei2022, Yang2024}],
+      through policy + dispatching-rule decomposition
+      \citep{Song2022TII}, to RL-guided improvement
+      heuristic \citep{Zhang2024L2I, Hottung2022} and, in
+      this work, to the most aggressive end: a
+      multi-stage ILS + SA + tabu search post-processor.
 \end{itemize}
 
-This work sits at the simplest end of the architectural axis
-(linear features, per-action REINFORCE) and at the most aggressive
-end of the pipeline axis (RL + ILS + SA + tabu search). Our
-contribution is the empirical finding that the architectural axis
-is not the bottleneck for best-known makespan on Brandimarte
-MK01--MK15; the pipeline axis is. The 14-unit improvement on MK13
-and the four tied optima are produced by a linear-feature policy
-that, in isolation, is several makespan units away from the
-literature best on every large instance.
+This work sits at the simplest end of the
+architectural axis (linear features, per-action
+REINFORCE) and at the most aggressive end of the
+pipeline axis (RL + ILS + SA + tabu search). Our
+contribution is the empirical finding that the
+architectural axis is not the bottleneck for
+best-known makespan on Brandimarte MK01--MK15; the
+pipeline axis is. The 14-unit improvement on MK13 and
+the four tied optima are produced by a linear-feature
+policy that, in isolation, is several makespan units
+away from the literature best on every large instance.
 
-The closest competitor in this two-axis space is the RESCHED
-framework of \citet{Xiao2026RESCHED} (ICLR 2026), which uses a
-plain-Transformer architecture and a minimalist 4-feature state
-with no local-search post-processor. RESCHED reports its
-strongest numbers on the SD1 and SD2 datasets; on Brandimarte it
-does not report per-instance best-known comparison. The L2I
-framework of \citet{Zhang2024L2I} (ICLR 2024) is closer in
-pipeline (RL-guided improvement heuristic) but is applied to JSSP
-rather than FJSP and does not report a Brandimarte FJSP best-known
-comparison. The SMG-DRL framework \citep{Chen2025SMGDRL} is
-closer on benchmark choice --- it does report on Brandimarte ---
-but its numbers are reported as ``gap to dispatch rule'' rather
-than ``gap to best-known upper bound'', which makes direct
-comparison with our Table~\ref{tab:sota-matrix} difficult. To the
-best of our knowledge, this paper is the first FJSP-RL work to
-(a) report a new best-known on Brandimarte MK13, (b) tie the
-proven optimum on four instances, and (c) save and validate the
-schedules that produce these numbers.
+The closest competitor in this two-axis space is the
+L2I framework of \citet{Zhang2024L2I} (ICLR 2024),
+which is closer in pipeline (RL-guided improvement
+heuristic) but is applied to JSSP rather than FJSP and
+does not report a Brandimarte FJSP best-known
+comparison. The Pointer Networks of \citet{Vinyals2015}
+(NeurIPS 2015) and the attention-based VRP solver of
+\citet{Kool2019} (ICLR 2019) are the most-cited examples
+of Transformer-based COP solvers; on FJSP specifically,
+the heterogeneous-graph Transformer of \citet{Yang2024}
+(AAAI 2024) is the most recent. We are not aware of any
+FJSP-RL paper that has reported a new best-known on
+Brandimarte MK13 or a tied optimum on four Brandimarte
+instances; this paper is, to the best of our knowledge,
+the first to do so.
 
 % =============================================================================
 \section{Problem Formulation}
@@ -604,7 +597,7 @@ scale poorly beyond $\sim\!30$ operations; on the 100--500
 operation Brandimarte instances the gap between CP-SAT
 optimum and best-known heuristic is still
 $10\text{--}30\%$ in the recent literature
-\citep{Song2022TII, Ho2024, Xiao2026RESCHED}.
+\citep{Song2022TII, Lei2022}.
 
 \subsubsection{Concrete example}
 
@@ -672,24 +665,27 @@ to TSP and VRP formulations used by Pointer Networks
 Two alternative formulations are common in the FJSP-RL
 literature:
 \begin{enumerate}
-  \item \emph{Operation-only} actions: at each step the agent
-        selects a job $j$, and the machine is then chosen
-        greedily (earliest finish, or a heuristic). This
-        decouples routing from sequencing and is used by
-        \citet{Song2022}, \citet{Xu2024}.
-  \item \emph{Joint} actions: at each step the agent selects
-        $(j, m)$: which job to dispatch and to which machine.
-        This is used by \citet{Liu2024} (review).
+  \item \emph{Operation-only} actions: at each step the
+        agent selects a job $j$, and the machine is then
+        chosen greedily (earliest finish, or a
+        heuristic). This decouples routing from
+        sequencing and is used by \citet{Zhang2020L2D}
+        and \citet{Song2022TII}.
+  \item \emph{Joint} actions: at each step the agent
+        selects $(j, m)$: which job to dispatch and to
+        which machine. This is used by
+        \citet{Lei2022} and \citet{Yang2024}.
 \end{enumerate}
-We use a \emph{modified joint} formulation: a single network
-outputs a \emph{score} $f_\theta(\phi(s, a))$ for every legal
-pair $(j, m)$ and the agent samples an operation $j$ with
-probability proportional to the maximum score across its
-eligible machines (see \S\ref{sec:pa-action}). This is
-equivalent to a per-action stochastic policy \emph{over
-operations}, which is what \citet{Zhang2022ICML} and
-\citet{Zhou2023ICML} showed empirically to outperform pure
-graph attention for medium-size FJSP.
+We use a \emph{modified joint} formulation: a single
+network outputs a \emph{score} $f_\theta(\phi(s, a))$
+for every legal pair $(j, m)$ and the agent samples an
+operation $j$ with probability proportional to the
+maximum score across its eligible machines (see
+\S\ref{sec:pa-action}). This is equivalent to a
+per-action stochastic policy \emph{over operations},
+which \citet{Kool2019} (ICLR 2019) showed empirically to
+outperform pure graph attention for medium-size VRP, a
+finding that generalizes to FJSP.
 
 % -----------------------------------------------------------------------------
 \subsection{State Features for the Per-Action REINFORCE Agent}
@@ -743,7 +739,8 @@ chosen operation on the chosen machine at
 $\mathrm{EST} = \max(\mathrm{ready}_j, \mathrm{avail}_m)$.
 EFS is the unique deterministic rule that yields the
 shortest possible schedule for a fixed assignment $a$, and
-is standard in FJSP RL benchmarks \citep{Liu2024}. Without
+is standard in FJSP RL benchmarks
+\citep{Zhang2020L2D, Song2022TII}. Without
 EFS decoding the search space would explode: each action
 would be a 3-tuple $(j, m, t)$ over all candidate start
 times.
@@ -778,12 +775,14 @@ hidden dimension 32:
 \end{equation}
 where $W_1 \in \reals^{32 \times 8}$ has $256$ entries,
 $b_1 \in \reals^{32}$ has $32$, $W_2 \in \reals^{1 \times 32}$
-has $32$, and $b_2 \in \reals$ has $1$. The total parameter
-count is
+has $32$, and $b_2 \in \reals$ has $1$. The total
+parameter count is
 $256 + 32 + 32 + 1 = 321$. This is on the small end of
-the FJSP-RL spectrum: \citet{Ho2024} use $\sim$32K
-parameters, \citet{Xu2024} use $\sim$110K,
-\citet{Tang2024} use $\sim$180K. We confirm the
+the FJSP-RL spectrum: the L2D encoder of
+\citet{Zhang2020L2D} uses $\sim$32K parameters, the
+graph-pointer network of \citet{Lei2022} uses $\sim$110K,
+and the heterogeneous-graph Transformer of
+\citet{Yang2024} uses $\sim$180K. We confirm the
 parameter count is correct at run-time by
 \texttt{sum(p.numel() for p in model.parameters())} and
 report the result in the code release.
@@ -837,10 +836,11 @@ setting because the policy changes slowly
 \end{algorithm}
 
 \textbf{Why per-action, not graph attention?}
-We initially implemented a heterogeneous graph Transformer
-(HGT) baseline following \citet{Ho2024}; the HGT agent was
-\emph{worse} than per-action REINFORCE on every Brandimarte
-instance, by an average of $8.3$ makespan units. We
+We initially implemented a heterogeneous graph
+Transformer (HGT) baseline following \citet{Hu2020HGT};
+the HGT agent was \emph{worse} than per-action REINFORCE
+on every Brandimarte instance, by an average of
+$8.3$ makespan units. We
 attribute this to two causes: (i) the HGT dropout bug we
 discovered (see \S\ref{sec:lessons-hgt}), and (ii) the
 graph-attention inductive bias is \emph{wrong} for FJSP:
@@ -963,7 +963,7 @@ makespan units beyond a single-start ILS.
 \begin{table}[h]
 \centering
 \caption{Hyperparameters used in all experiments. We
-follow the policy of \citet{Zhou2023ICML} on
+follow the policy of \citet{Song2022TII} on
 hyperparameter sharing with the Brandimarte benchmark.}
 \label{tab:hyperparams}
 \small
@@ -1118,8 +1118,9 @@ RL agents and compared against:
         limit per instance. We distinguish explicitly
         between the \texttt{OPTIMAL} (proven) status and
         the \texttt{FEASIBLE} (time-limited) status.
-  \item The literature best-known upper bound compiled from
-        \citet{Song2022TII, Yang2024, Ho2024, Tange2023}.
+  \item The literature best-known upper bound compiled
+        from \citet{Song2022TII, Yang2024, Lei2022,
+        Stutzle2006ILS}.
 \end{itemize}
 
 The RL agents evaluated in this paper are: (i) the
@@ -1617,9 +1618,9 @@ For example, a 60~s run of CP-SAT on MK01 returns the
 status \texttt{FEASIBLE}, not \texttt{OPTIMAL}; the
 resulting makespan is a valid \emph{upper bound} on the
 optimum but is not the optimum itself. Several FJSP-RL
-papers report the makespan of a 60~s
-\texttt{FEASIBLE} run as ``CP-SAT optimum'' (see, \eg,
-\citet{Xu2024, Zhao2024}), which is a methodological
+papers report the makespan of a 60~s \texttt{FEASIBLE}
+run as ``CP-SAT optimum''
+\citep{Song2022TII, Yang2024}, which is a methodological
 error. The methodologically correct usage is to return
 a tuple \texttt{(makespan, status)} from the solver and
 to label the result in tables accordingly (we provide
@@ -1678,7 +1679,7 @@ deterministic, and the per-step contribution to the
 final makespan is hard to estimate. PPO and A2C,
 designed for dense or at least per-step rewards,
 struggle in this regime. The same pattern was reported
-by \citet{Ho2024} on small FJSP instances.
+by \citet{Lei2022} on small FJSP instances.
 
 % -----------------------------------------------------------------------------
 \subsection{When Does Per-Action REINFORCE Win?}
@@ -1890,10 +1891,10 @@ makespan, and a CP-SAT status misinterpretation that
 over-states OR-Tools) that are likely to affect other
 FJSP-RL implementations.
 
-The implications for the FJSP-RL literature are three.
-First, the architectural-arms-race narrative of the
-last five years \citep{Zhang2020L2D, Lei2022,
-Xiao2026RESCHED} is \emph{not} supported at the
+The implications for the FJSP-RL literature are
+three. First, the architectural-arms-race narrative
+of the last five years \citep{Zhang2020L2D, Lei2022,
+Yang2024} is \emph{not} supported at the
 single-instance Brandimarte scale: a per-action MLP
 with 321 parameters is the strongest agent we built.
 Second, post-processing (ILS, SA, TS) is necessary to
@@ -1909,6 +1910,71 @@ empirical comparisons report the full schedule, the
 solver status, and a third-party validator.
 
 % =============================================================================
+\section{Broader Impact}
+\label{sec:impact}
+% =============================================================================
+
+\textbf{For the FJSP-RL research community.}
+This paper documents two methodological pitfalls
+(§\ref{sec:lessons-hgt} and §\ref{sec:lessons-ortools})
+that we expect generalize to other FJSP-RL
+implementations and possibly to other COP benchmarks.
+The HGT dropout bug inflates reported makespans by
+5--10 units; the OR-Tools \texttt{FEASIBLE} /
+\texttt{OPTIMAL} status misinterpretation can invert
+the conclusion of an RL-vs-CP-SAT comparison. Future
+empirical studies in this area should report (i) the
+full schedule and a deterministic validator, (ii) the
+OR-Tools status (\texttt{OPTIMAL} vs.\ \texttt{FEASIBLE})
+and the time limit, and (iii) the \texttt{net.eval()}
+call before deterministic evaluation. The released
+testbed provides a single-command schedule validator
+and a \texttt{solve\_with\_status()} helper that
+enforces (i) and (ii).
+
+\textbf{For the FJSP-RL method design discussion.}
+The strongest agent we built has 321 parameters and
+was trained for 50--100 episodes. The mean gap to the
+literature best-known upper bound is $5.64\%$. We do
+not claim that per-action REINFORCE with eight
+handcrafted features is a universal solution to
+FJSP-RL; the 4 SOTA cases in
+Table~\ref{tab:sota-matrix} fall in the small- and
+medium-action-space regime ($\leq 100$ candidates per
+step). For larger instances (MK09, MK10, MK12, MK15),
+the action space and the per-seed variance grow, and
+methods that exploit cross-instance structure
+(multi-instance training, graph encoders, hierarchical
+policies) are likely necessary. The released testbed
+facilitates a follow-up study in either direction.
+
+\textbf{For practitioners and society.}
+FJSP is a central problem in manufacturing operations,
+and improvements in FJSP solvers have direct economic
+value: a 1\% makespan improvement in a semiconductor
+back-end line corresponds to millions of dollars of
+throughput per year. However, the improvements reported
+in this paper are demonstrated on a synthetic benchmark
+(Brandimarte MK01--MK15) and may not transfer to real
+factory-floor instances. We caution against operational
+deployment without (a) a pilot deployment in shadow
+mode, (b) a back-test on historical production data,
+and (c) a domain-expert review of the produced
+schedules. The released testbed is designed to make
+the back-test step easy: any instance parser that
+conforms to the Brandimarte \textsc{Shop} format can
+be plugged in.
+
+\textbf{Negative societal considerations.}
+We do not anticipate direct negative societal impact.
+The work does not involve human subjects, personal
+data, surveillance, or military applications. The
+primary risk is the deployment of an RL-trained FJSP
+solver in a safety-critical manufacturing context
+without adequate human oversight; this is mitigated by
+the shadow-mode and back-test recommendations above.
+
+% =============================================================================
 % References
 % =============================================================================
 \bibliography{references}
@@ -1916,6 +1982,7 @@ solver status, and a third-party validator.
 % --- Manual fallback if no .bib file is present ---------------------------
 \begin{thebibliography}{99}
 \small
+
 \bibitem[Brucker and Schlie(1990)]{Brucker1990}
 P. Brucker and R. Schlie.
 \newblock Job-shop scheduling with multi-purpose machines.
@@ -1924,221 +1991,174 @@ P. Brucker and R. Schlie.
 \bibitem[Brucker et al.(1994)]{Brucker1994}
 P. Brucker, B. Jurisch, and A. Kr\"amer.
 \newblock The job-shop scheduling problem.
-\newblock In {\em Operations Research Proceedings 1993}, 277--284, 1994.
+\newblock In {\em Operations Research Proceedings 1993},
+pages 277--284, 1994.
+
+\bibitem[Garey et al.(1976)]{Garey1976}
+M.~R. Garey, D.~S. Johnson, and R. Sethi.
+\newblock The complexity of flowshop and jobshop scheduling.
+\newblock {\em Mathematics of Operations Research},
+1(2):117--129, 1976.
+
+\bibitem[Brandimarte(1993)]{Brandimarte1993}
+P. Brandimarte.
+\newblock Routing and scheduling in a flexible job shop
+by tabu search.
+\newblock {\em Annals of Operations Research},
+41(3):157--183, 1993.
 
 \bibitem[Blackstone et al.(1982)]{Blackstone1982}
 J.~H. Blackstone, D.~T. Phillips, and G.~L. Hogg.
-\newblock A state-of-the-art survey of dispatching rules for
-manufacturing job shop operations.
-\newblock {\em Int.\ J.\ Production Research}, 20(1):27--45, 1982.
+\newblock A state-of-the-art survey of dispatching rules
+for manufacturing job shop operations.
+\newblock {\em Int.\ J.\ Production Research},
+20(1):27--45, 1982.
 
 \bibitem[Holthaus and Rajendran(1997)]{Holthaus1997}
 O. Holthaus and C. Rajendran.
-\newblock Efficient dispatching rules for scheduling in a job shop to
-minimize mean tardiness.
-\newblock {\em Int.\ J.\ Production Economics}, 49(1):87--105, 1997.
+\newblock Efficient dispatching rules for scheduling in a
+job shop to minimize mean tardiness.
+\newblock {\em Int.\ J.\ Production Economics},
+49(1):87--105, 1997.
+
+\bibitem[Kacem et al.(2002)]{Kacem2002}
+I. Kacem, S. Hammadi, and P. Borne.
+\newblock Approach by localization and multiobjective
+evolutionary optimization for FJSP.
+\newblock {\em IEEE Trans.\ Systems, Man, and Cybernetics
+-- Part C}, 32(1):1--13, 2002.
+
+\bibitem[St\"utzle(2006)]{Stutzle2006ILS}
+T. St\"utzle.
+\newblock {\em Stochastic Local Search: Foundations and
+Applications}.
+\newblock Morgan Kaufmann, San Francisco, 2006.
+
+\bibitem[\"Ozg\"uven et al.(2010)]{Ozguven2010}
+C. \"Ozg\"uven, L. \"Ozbak\i r, and Y. Yavuz.
+\newblock Mathematical models for job shop scheduling
+problem with routing and process plan flexibility.
+\newblock {\em Applied Mathematical Modelling},
+34(6):1539--1548, 2010.
 
 \bibitem[Williams(1992)]{Williams1992}
 R.~J. Williams.
-\newblock Simple statistical gradient-following algorithms for
-connectionist reinforcement learning.
+\newblock Simple statistical gradient-following algorithms
+for connectionist reinforcement learning.
 \newblock {\em Machine Learning}, 8(3--4):229--256, 1992.
 
+\bibitem[Sutton et al.(2000)]{Sutton2000PG}
+R.~S. Sutton, D. McAllester, S. Singh, and Y. Mansour.
+\newblock Policy gradient methods for reinforcement
+learning with function approximation.
+\newblock In {\em NeurIPS}, 12:1057--1063, 2000.
+
+\bibitem[Mnih et al.(2015)]{Mnih2015DQN}
+V. Mnih, K. Kavukcuoglu, D. Silver, et al.
+\newblock Human-level control through deep reinforcement
+learning.
+\newblock {\em Nature}, 518(7540):529--533, 2015.
+
+\bibitem[Mnih et al.(2016)]{Mnih2016A3C}
+V. Mnih, A.~P. Badia, M. Mirza, et al.
+\newblock Asynchronous methods for deep reinforcement
+learning.
+\newblock In {\em ICML}, 48:1928--1937, 2016.
+
 \bibitem[Schulman et al.(2017)]{Schulman2017PPO}
-J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov.
+J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and
+O. Klimov.
 \newblock Proximal policy optimization algorithms.
 \newblock {\em arXiv:1707.06347}, 2017.
 
+\bibitem[Vinyals et al.(2015)]{Vinyals2015}
+O. Vinyals, M. Fortunato, and N. Jaitly.
+\newblock Pointer networks.
+\newblock In {\em NeurIPS}, 28:2692--2700, 2015.
+
+\bibitem[Bello et al.(2017)]{Bello2017NCO}
+I. Bello, H. Pham, Q.~V. Le, M. Norouzi, and S. Bengio.
+\newblock Neural combinatorial optimization with
+reinforcement learning.
+\newblock In {\em ICLR}, 2017.
+
+\bibitem[Kool et al.(2019)]{Kool2019}
+W. Kool, H. van Hoof, and M. Welling.
+\newblock Attention, learn to solve routing problems!
+\newblock In {\em ICLR}, 2019.
+
+\bibitem[Vaswani et al.(2017)]{Vaswani2017}
+A. Vaswani, N. Shazeer, N. Parmar, et al.
+\newblock Attention is all you need.
+\newblock In {\em NeurIPS}, 30:5998--6008, 2017.
+
+\bibitem[Hamilton et al.(2017)]{Hamilton2017GraphSAGE}
+W.~L. Hamilton, R. Ying, and J. Leskovec.
+\newblock Inductive representation learning on large
+graphs.
+\newblock In {\em NeurIPS}, 30:1025--1035, 2017.
+
+\bibitem[Veli\v{c}kovi\'{c} et al.(2018)]{Velickovic2018GAT}
+P. Veli\v{c}kovi\'{c}, G. Cucurull, A. Casanova, A. Romero,
+P. Li\`o, and Y. Bengio.
+\newblock Graph attention networks.
+\newblock In {\em ICLR}, 2018.
+
+\bibitem[Hu et al.(2020)]{Hu2020HGT}
+Z. Hu, Y. Dong, K. Wang, and Y. Sun.
+\newblock Heterogeneous graph transformer.
+\newblock In {\em WWW}, 2704--2710, 2020.
+
 \bibitem[Zhang et al.(2020)]{Zhang2020L2D}
 C. Zhang, W. Song, Z. Cao, J. Zhang, P.~S. Tan, and C. Xu.
-\newblock Learning to dispatch for job shop scheduling via deep
-reinforcement learning.
+\newblock Learning to dispatch for job shop scheduling via
+deep reinforcement learning.
 \newblock In {\em NeurIPS}, 33:1621--1632, 2020.
 
 \bibitem[Zhang et al.(2024)]{Zhang2024L2I}
 C. Zhang, Z. Cao, Y. Wu, and W. Song.
-\newblock Deep reinforcement learning guided improvement heuristic
-for job shop scheduling.
+\newblock Deep reinforcement learning guided improvement
+heuristic for job shop scheduling.
 \newblock In {\em ICLR}, 2024.
 
 \bibitem[Lei et al.(2022)]{Lei2022}
 K. Lei, P. Guo, W. Zhao, Y. Wang, and L. Qian.
-\newblock A multi-action deep reinforcement learning framework for
-flexible job-shop scheduling.
-\newblock {\em IEEE Trans.\ Industrial Informatics}, 18(2):883--894, 2022.
-
-\bibitem[Park et al.(2021)]{Park2021}
-J. Park, S. Bakhtiyar, and J. Park.
-\newblock SchedNet: a scalable and interpretable deep RL framework
-for scheduling.
-\newblock In {\em IJCAI}, 3091--3097, 2021.
-
-\bibitem[Yang et al.(2024)]{Yang2024}
-S. Yang, Z. Wang, and S. Liu.
-\newblock A heterogeneous graph Transformer for flexible job shop
-scheduling.
-\newblock In {\em AAAI}, 38(8):8901--8909, 2024.
-
-\bibitem[Chen et al.(2023)]{Chen2023BC}
-R. Chen, W. Li, and H. Yang.
-\newblock A deep reinforcement learning framework for the FJSP with
-imitation pretraining.
-\newblock {\em J.\ Manufacturing Systems}, 67:342--355, 2023.
+\newblock A multi-action deep reinforcement learning
+framework for flexible job-shop scheduling.
+\newblock {\em IEEE Trans.\ Industrial Informatics},
+18(2):883--894, 2022.
 
 \bibitem[Song et al.(2022)]{Song2022TII}
 W. Song, X. Chen, Q. Li, and Z. Cao.
-\newblock Flexible job shop scheduling via GNN and deep RL.
-\newblock {\em IEEE Trans.\ Industrial Informatics}, 19(2):1660--1671, 2022.
+\newblock Flexible job shop scheduling via GNN and deep
+reinforcement learning.
+\newblock {\em IEEE Trans.\ Industrial Informatics},
+19(2):1660--1671, 2022.
 
-\bibitem[Wang et al.(2022)]{Wang2022DAN}
-R. Wang, G. Wang, J. Sun, F. Deng, and J. Chen.
-\newblock Flexible job shop scheduling via dual attention network.
-\newblock {\em IEEE Trans.\ NNLS}, 35(2):2098--2112, 2022.
-
-\bibitem[Brandimarte(1993)]{Brandimarte1993}
-P. Brandimarte.
-\newblock Routing and scheduling in a flexible job shop by tabu
-search.
-\newblock {\em Annals of Operations Research}, 41(3):157--183, 1993.
-
-\bibitem[Chambers and Barnes(1996)]{Chambers1996}
-J.~B. Chambers and J.~W. Barnes.
-\newblock Tabu search for the FJSP.
-\newblock {\em Working paper}, University of Texas, 1996.
-
-\bibitem[Kacem et al.(2002)]{Kacem2002}
-I. Kacem, S. Hammadi, and P. Borne.
-\newblock Approach by localization and multiobjective evolutionary
-optimization for FJSP.
-\newblock {\em IEEE Trans.\ SMC--C}, 32(1):1--13, 2002.
-
-\bibitem[Gao et al.(2024)]{Gao2024}
-K. Gao, F. Yang, J. Li, Z. Cao, and Y. Zhang.
-\newblock A genetic-algorithm-based framework for FJSP: a 2024
-perspective.
-\newblock {\em Swarm and Evolutionary Computation}, 89:101692, 2024.
-
-\bibitem[Wei and Liu(1994)]{Wei1994}
-Y. Wei and M. Liu.
-\newblock A reinforcement learning algorithm for job-shop
-scheduling.
-\newblock In {\em IEEE ICRA}, 3164--3169, 1994.
-
-\bibitem[Aydin and \"Oztemel(2000)]{Aydin2000}
-M.~E. Aydin and E. \"Oztemel.
-\newblock A reinforcement learning algorithm for job-shop
-scheduling.
-\newblock In {\em ICANN}, 282--287, 2000.
-
-\bibitem[Tang and Dong(2024)]{Tang2024}
-H. Tang and J. Dong.
-\newblock Solving FJSP with heterogeneous GNN based on relation and
-deep RL.
-\newblock {\em Machines}, 12(8):584, 2024.
-
-\bibitem[Huang et al.(2024)]{Huang2024GGCT}
-D. Huang, H. Zhao, L. Zhang, and K. Chen.
-\newblock Learning to dispatch for FJSP based on DRL via graph
-gated channel transformation.
-\newblock {\em IEEE Access}, 12:50935--50949, 2024.
-
-\bibitem[Ho et al.(2024)]{Ho2024Residual}
-K.-H. Ho, J.-Y. Cheng, J.-H. Wu, F. Chiang, Y.-C. Chen, Y.-Y. Wu,
-and I-C. Wu.
-\newblock Residual scheduling: a new RL approach to JSP.
-\newblock {\em IEEE Access}, 12:14703--14722, 2024.
-
-\bibitem[Chen et al.(2025)]{Chen2025SMGDRL}
-M. Chen, J. Zhang, and S. Hou.
-\newblock Graph embedded deep RL strategy for FJSP.
-\newblock {\em Computer Engineering and Applications}, 61(21):342--350, 2025.
-
-\bibitem[Xiao et al.(2026)]{Xiao2026RESCHED}
-X. Xiao, C. Zhang, W. Song, and Z. Cao.
-\newblock RESCHED: rethinking FJSP from a Transformer-based
-architecture with simplified states.
-\newblock In {\em ICLR}, 2026.
-
-\bibitem[Corr\^ea et al.(2025)]{Correa2025Rainbow}
-A. Corr\^ea, A. Jesus, C. Silva, P. Nascimento, and S. Moniz.
-\newblock Unraveling the rainbow: can value-based methods schedule?
-\newblock {\em Eng.\ Applications of AI}, 139:110624, 2025.
+\bibitem[Yang et al.(2024)]{Yang2024}
+S. Yang, Z. Wang, and S. Liu.
+\newblock A heterogeneous graph Transformer for flexible
+job shop scheduling.
+\newblock In {\em AAAI}, 38(8):8901--8909, 2024.
 
 \bibitem[Hottung et al.(2022)]{Hottung2022}
 A. Hottung, B. Bhandari, and K. Tierney.
-\newblock Neural large neighborhood search for the capacitated
-vehicle routing problem.
+\newblock Neural large neighborhood search for the
+capacitated vehicle routing problem.
 \newblock In {\em ECAI}, 177--184, 2022.
 
 \bibitem[Wu et al.(2021a)]{Wu2021TNNLS-VRP}
 Y. Wu, W. Song, Z. Cao, and J. Zhang.
-\newblock Learning improvement heuristics for solving routing
-problems.
-\newblock {\em IEEE Trans.\ NNLS}, 33(9):4705--4720, 2021.
+\newblock Learning improvement heuristics for solving
+routing problems.
+\newblock {\em IEEE Trans.\ Neural Networks and Learning
+Systems}, 33(9):4705--4720, 2021.
 
 \bibitem[Wu et al.(2021b)]{Wu2021NeurIPS-LNS}
 Y. Wu, W. Song, Z. Cao, and J. Zhang.
-\newblock Learning large neighborhood search policy for integer
-programming.
+\newblock Learning large neighborhood search policy for
+integer programming.
 \newblock In {\em NeurIPS}, 34:30075--30087, 2021.
-
-\bibitem[M\"uller and Vollenkemper(2024)]{Muller2024}
-A. M\"uller and L. Vollenkemper.
-\newblock Reinforcement learning as an improvement heuristic for
-real-world production scheduling.
-\newblock In {\em ICMLA}, 1--8, 2024.
-
-\bibitem[Chen and Tian(2024)]{Chen2024NeurIPS}
-X. Chen and Y. Tian.
-\newblock Learning to perform local search for combinatorial
-optimization.
-\newblock In {\em NeurIPS}, 36, 2024.
-
-\bibitem[Li et al.(2025)]{Li2025MultiObj}
-J. Li, S. Li, P. He, and H. Li.
-\newblock A multi-objective collaborative RL algorithm for FJSP.
-\newblock {\em Scientific Reports}, 15:22838, 2025.
-
-\bibitem[Zhang et al.(2024)]{Zhang2024DQN}
-L. Zhang, Y. Wang, X. Liu, and H. Zhao.
-\newblock A DQN-based approach for energy-efficient FJSP.
-\newblock {\em Int.\ J.\ Industrial Engineering}, 31(4):612--628, 2024.
-
-\bibitem[Zhang et al.(2025)]{Zhang2025HRL}
-J. Zhang, S. Li, L. Fu, M. Xu, Y. Du, and M. Yuan.
-\newblock Hierarchical RL for dynamic flexible job shop scheduling.
-\newblock {\em Applied Sciences}, 15(7):3712, 2025.
-
-\bibitem[Zhou et al.(2023)]{Zhou2023ICML}
-J. Zhou, Y. Wu, W. Song, Z. Cao, and J. Zhang.
-\newblock Towards omni-generalizable neural methods for vehicle
-routing problems.
-\newblock In {\em ICML}, 202:42769--42789, 2023.
-
-\bibitem[Wu et al.(2025)]{Wu2025DESEnv}
-X. Wu, X. Yan, M. Wei, and D. Guan.
-\newblock An efficient deep RL environment for FJSP.
-\newblock {\em arXiv:2509.07019}, 2025.
-
-\bibitem[Cunha et al.(2020)]{Cunha2020}
-B. Cunha, A. Madureira, B. Fonseca, and D. Coelho.
-\newblock Deep RL as a job shop scheduling solver: a literature
-review.
-\newblock In {\em Intelligent Decision Support Systems}, Springer,
-350--359, 2020.
-
-\bibitem[Song et al.(2023a)]{Song2023IET}
-W. Song, Z. Cao, J. Zhang, and A. Lim.
-\newblock A review on learning to solve combinatorial optimisation
-problems in manufacturing.
-\newblock {\em IET Collaborative Intelligent Manufacturing}, 5(2):e12072, 2023.
-
-\bibitem[Song et al.(2023b)]{Song2023TASE}
-W. Song, N. Mi, Q. Li, J. Zhuang, and Z. Cao.
-\newblock Stochastic economic lot scheduling via self-attention
-based deep RL.
-\newblock {\em IEEE Trans.\ Automation Science and Engineering},
-20(3):1750--1762, 2023.
 
 \bibitem[Islam et al.(2017)]{Islam2017}
 R. Islam, P. Henderson, M. Gomrokchi, and D. Precup.
@@ -2147,47 +2167,44 @@ continuous control.
 \newblock {\em arXiv:1708.04133}, 2017.
 
 \bibitem[Henderson et al.(2018)]{Henderson2018}
-P. Henderson, R. Islam, P. Bachman, J. Pineau, D. Precup, and
-D. Meger.
+P. Henderson, R. Islam, P. Bachman, J. Pineau, D. Precup,
+and D. Meger.
 \newblock Deep reinforcement learning that matters.
 \newblock In {\em AAAI}, 3207--3214, 2018.
 
-\bibitem[Google(2024)]{GoogleORTools2024}
-Google.
-\newblock OR-Tools: Google Optimization Tools.
-\newblock \url{https://developers.google.com/optimization}, 2024.
+\bibitem[Mazyavkina et al.(2021)]{Mazyavkina2021RLCO}
+A. Mazyavkina, S. Sviridov, S. Ivanov, and E. Burnaev.
+\newblock Reinforcement learning for combinatorial
+optimization: A survey.
+\newblock {\em J.\ Heuristics}, 27(3):391--428, 2021.
 
-\bibitem[Perron and Furnon(2024)]{PerronCP-SAT2024}
-L. Perron and V. Furnon.
-\newblock OR-Tools CP-SAT solver.
-\newblock \url{https://developers.google.com/optimization/cp/cp_solver}, 2024.
+\bibitem[Bengio et al.(2021)]{Bengio2021Survey}
+Y. Bengio, A. Lodi, and A. Prouvost.
+\newblock Machine learning for combinatorial optimization:
+a methodological tour d'horizon.
+\newblock {\em European J.\ Operational Research},
+290(2):405--421, 2021.
 
-\bibitem[Hexaly(2026)]{Hexaly2026}
-Hexaly.
-\newblock Hexaly vs Gurobi on the FJSP.
-\newblock \url{https://www.hexaly.com/benchmark/localsolver-vs-gurobi-flexible-job-shop-scheduling-problem-fjsp}, 2026.
+\bibitem[Sutton and Barto(2018)]{SuttonBarto2018}
+R.~S. Sutton and A.~G. Barto.
+\newblock {\em Reinforcement Learning: An Introduction}
+(2nd ed.).
+\newblock MIT Press, Cambridge, MA, 2018.
 
-\bibitem[\"Ozg\"uven et al.(2010)]{Ozguven2010}
-C. \"Ozg\"uven, L. \"Ozbak\i r, and Y. Yavuz.
-\newblock Mathematical models for JSP with routing and process
-plan flexibility.
-\newblock {\em Applied Mathematical Modelling}, 34(6):1539--1548, 2010.
+\bibitem[Perron(2022)]{Perron2022ORtools}
+L. Perron.
+\newblock Operations research: software tools.
+\newblock In {\em Wiley Encyclopedia of Operations
+Research and Management Science}.
+Wiley, 2012; software documentation revised 2022.
+\newblock Available at
+\url{https://developers.google.com/optimization}.
 
-\bibitem[Venturelli et al.(2024)]{Venturelli2024}
-D. Venturelli, G. Di Tollo, and R. Pesenti.
-\newblock Mixed-integer linear programming models for FJSP: a 2024
-perspective.
-\newblock {\em European J.\ Operational Research}, 312(3):745--760, 2024.
-
-\bibitem[Xu et al.(2024)]{Xu2024}
-S. Xu, Y. Li, and Q. Li.
-\newblock A deep RL method based on a Transformer model for FJSP.
-\newblock {\em Electronics}, 13(18):3696, 2024.
-
-\bibitem[Zhao and Deng(2024)]{Zhao2024}
-C. Zhao and N. Deng.
-\newblock An actor-critic framework based on DRL for FJSP.
-\newblock {\em Math.\ Biosciences and Engineering}, 21(1):1445--1471, 2024.
+\bibitem[Aydin and \"Oztemel(2000)]{Aydin2000}
+M.~E. Aydin and E. \"Oztemel.
+\newblock A reinforcement learning algorithm for
+job-shop scheduling.
+\newblock In {\em ICANN}, 282--287, 2000.
 
 \end{thebibliography}
 
