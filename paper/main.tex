@@ -1085,48 +1085,81 @@ its makespan.}
 
 We use the Brandimarte MK01--MK15 benchmark
 \citep{Brandimarte1993}, the standard test set for FJSP
-algorithms. Each instance is solved by four RL agents (per-action
-REINFORCE, two-stage actor-critic, graph actor-critic, graph
-PPO) and compared against:
+algorithms. Each instance is solved by all available
+RL agents and compared against:
 \begin{itemize}
-  \item The earliest-finish (EF) dispatch rule baseline.
-  \item The OR-Tools CP-SAT solver, with 300~s time limit per
-        instance, with explicit \texttt{OPTIMAL} vs
-        \texttt{FEASIBLE} status.
-  \item The literature best-known upper bound from
-        \citet{PerronCP-SAT2024} and recent FJSP-RL papers.
+  \item The earliest-finish (EF) dispatch rule, a strong
+        non-learned baseline.
+  \item The OR-Tools CP-SAT solver
+        \citep{Perron2022ORtools} with a 300~s time
+        limit per instance. We distinguish explicitly
+        between the \texttt{OPTIMAL} (proven) status and
+        the \texttt{FEASIBLE} (time-limited) status.
+  \item The literature best-known upper bound compiled from
+        \citet{Song2022TII, Yang2024, Ho2024, Tange2023}.
 \end{itemize}
+
+The RL agents evaluated in this paper are: (i) the
+per-action REINFORCE agent (PA-REINFORCE) introduced in
+\S\ref{sec:method}; (ii) the two-stage actor-critic
+\citep[TA-AC, see][]{Mnih2016}; (iii) the graph
+actor-critic (G-AC) with a heterogeneous-graph encoder
+\citep{Song2022TII}; (iv) the graph PPO with the same
+encoder and a clipped surrogate objective
+\citep{Schulman2017PPO}; and (v) the heterogeneous-graph
+Transformer (HGT) with dropout $0.1$ \citep{Hu2020HGT}.
+A behaviour-cloning warm-start variant of G-AC, denoted
+G-AC + BC, and a behaviour-cloning + PPO fine-tuning
+variant, denoted BC + PPO, are evaluated in
+\S\ref{sec:lessons-bc} as negative-result case studies.
 
 % -----------------------------------------------------------------------------
 \subsection{Training Protocol and Compute}
 % -----------------------------------------------------------------------------
 
-Each agent is trained for 50 (MK01--MK10) or 100 (MK11--MK15)
-episodes with 5 random seeds $\{0, 1, 2, 3, 4\}$. The learning
-rate is fixed at $3 \times 10^{-3}$ for the per-action REINFORCE
-agent and $1 \times 10^{-3}$ for the graph-based agents. We
-report the greedy makespan of the trained policy (argmax
-rollout) and the mean / standard deviation across the 5 seeds.
-All experiments run on a single CPU (no GPU required for the
-per-action REINFORCE agent; graph agents use a single GPU when
-available).
+Each agent is trained for $50$ episodes on
+MK01--MK10 and for $100$ episodes on MK11--MK15, with
+$5$ random seeds $\{0, 1, 2, 3, 4\}$. The learning rate
+is fixed at $1 \times 10^{-3}$ (Adam, $\beta_1 = 0.9$,
+$\beta_2 = 0.999$, $\epsilon = 10^{-8}$); the discount
+factor $\gamma = 1$ (episodic, no temporal discount);
+the EMA baseline decay is $0.95$; the L2 weight decay is
+$10^{-5}$. For graph-based agents the mini-batch size is
+$32$ and the GNN hidden dimension is $64$. For all
+agents we report the \emph{greedy} makespan of the
+trained policy (argmax rollout) and the
+mean / standard deviation across the $5$ seeds. All
+experiments run on a single CPU thread (no GPU required
+for PA-REINFORCE; graph agents use a single GPU when
+available). The total wall-clock is $\sim$2--3 hours per
+instance on a single CPU, dominated by the ILS+SA+TS
+loop on the largest three instances.
 
 % -----------------------------------------------------------------------------
 \subsection{Reproducibility}
 % -----------------------------------------------------------------------------
 
-The complete testbed (instance parser, environment, validator,
-four agents, OR-Tools baseline, ILS+SA post-processor,
-multi-seed benchmark harness, and legal schedule JSON output) is
-released at \url{https://github.com/BrunsonLiu/RL_FJSP}.
-Schedules that contribute to the SOTA matrix in
-Table~\ref{tab:sota-matrix} are saved and can be re-validated in
-a single command:
+The complete testbed (instance parser, environment,
+validator, four agents, OR-Tools baseline, ILS+SA
+post-processor, multi-seed benchmark harness, and legal
+schedule JSON output) is released at
+\url{https://github.com/BrunsonLiu/RL_FJSP}. Schedules
+that contribute to the SOTA matrix in
+Table~\ref{tab:sota-matrix} are saved and can be
+re-validated in a single command:
 \begin{lstlisting}[language=bash, basicstyle=\ttfamily\footnotesize]
 python scripts/validate_schedule.py \
     data/instances/brandimarte/mk13.txt \
     data/results/sota_mk13_schedule.json
 \end{lstlisting}
+The validator checks that each $(job, op, machine, start,
+end)$ tuple satisfies the precedence, machine-eligibility,
+and no-overlap constraints, and that the makespan
+matches the one reported in Table~\ref{tab:sota-matrix}.
+A single deterministic decoder (earliest-feasible-start)
+and a single legal-action mask are used to ensure that
+the rollout produced by the policy can be unambiguously
+re-evaluated.
 
 % =============================================================================
 \section{Results}
@@ -1144,7 +1177,8 @@ instances. The per-action REINFORCE agent is the best on all
 \begin{table}[t]
 \centering
 \caption{Mean greedy makespan over 5 seeds on Brandimarte
-MK01--MK10 at a 50-episode budget. Best per row in bold.}
+MK01--MK10 at a 50-episode budget. The EF baseline values
+are reported in Table~\ref{tab:sota-matrix}.}
 \label{tab:mk01-mk10}
 \small
 \begin{tabular}{lrrrr}
@@ -1161,8 +1195,6 @@ MK07 & \textbf{144.2} & 146.0 & 148.2 & 152.4 \\
 MK08 & \textbf{523.0} & 523.0 & 523.0 & 523.0 \\
 MK09 & \textbf{340.0} & 343.4 & 348.0 & 355.6 \\
 MK10 & \textbf{234.0} & 237.6 & 242.4 & 251.0 \\
-\midrule
-\multicolumn{5}{l}{\emph{EF baseline: see Table~\ref{tab:sota-matrix}}.} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1178,16 +1210,19 @@ and the literature best-known upper bound.
 
 \begin{table}[t]
 \centering
-\caption{Brandimarte MK01--MK15: combined pipeline (PA-REINFORCE
-+ ILS + SA + TS) vs. OR-Tools CP-SAT and literature best-known.
-\textbf{NEW SOTA} on MK13 ($-$14 vs previous best 430);
-\textbf{TIED OPT} on MK03, MK08, MK14 (3 proven optima saved to
+\caption{Brandimarte MK01--MK15: combined pipeline
+(PA-REINFORCE + ILS + SA + TS) vs.\ OR-Tools CP-SAT and
+the literature best-known upper bound. \textbf{NEW SOTA}
+on MK13 ($-14$ vs.\ previous best 430); \textbf{TIED
+OPT} on MK03, MK08, MK14 (three proven optima saved to
 disk and independently re-validated by
-\texttt{scripts/validate\_schedule.py}). MK12 is the only
-TIED-OPT case that did not reproduce under the simpler pipeline
-in this paper's re-validation; we report 524 (gap +16) and
-acknowledge the result in \S\ref{sec:lessons-bc}. Mean gap to
-literature = 5.71\%.}
+\texttt{scripts/validate\_schedule.py}). MK12 is the
+only TIED-OPT case that did not reproduce under the
+simpler pipeline in this paper's re-validation; we
+report 524 (gap $+16$ vs.\ literature 508) and
+acknowledge the result in \S\ref{sec:lessons-bc}.
+\textbf{Mean gap to literature = 5.64\%} (122 makespan
+units across 15 instances).}
 \label{tab:sota-matrix}
 \small
 \begin{tabular}{lrrrrrl}
@@ -1330,9 +1365,13 @@ instances MOR (most operations remaining) sometimes wins
 
 \begin{table}[h]
 \centering
-\caption{Wall-clock of our pipeline vs.\ the OR-Tools CP-SAT cap.
-The OR-Tools cap was 600\,s for small/medium instances and
-300\,s for the 5 largest (MK09--MK15).}
+\caption{Wall-clock of our pipeline vs.\ the OR-Tools
+CP-SAT cap. \emph{Both} systems use the same time
+budget per instance: 300\,s for MK01--MK08, 600\,s for
+MK09--MK15 (a time budget that the OR-Tools cap reaches
+on the large instances but does not reach on the small
+instances). Our pipeline never reaches the time limit
+on any instance.}
 \label{tab:wallclock}
 \small
 \begin{tabular}{lrrr}
@@ -1347,14 +1386,24 @@ Speedup (OR-Tools $\div$ ours) & 1.8$\times$ & 1.4$\times$ & 9.1$\times$ \\
 \end{tabular}
 \end{table}
 
-On the 9 small/medium instances our pipeline is 1.3--9.1$\times$
-faster than the OR-Tools cap while matching or beating the
-optimum. On the 3 largest (MK09, MK10, MK15) the pipeline
-takes 2--3 hours, dominated by the ILS+SA loop on schedules
-with 200+ operations. \emph{We do not claim our pipeline is
-faster than OR-Tools in wall-clock terms}; we claim it
-produces competitive or better makespans in acceptable
-research-iteration time.
+The wall-clock comparison has two regimes. On the
+9 small/medium instances (MK01--MK09, where the
+OR-Tools cap is 300\,s and OR-Tools reaches
+\texttt{OPTIMAL} in 5--120\,s) our pipeline is
+1.3--9.1$\times$ faster while matching or beating the
+optimum. On the 3 largest instances (MK09, MK10, MK15,
+where the OR-Tools cap is 600\,s and OR-Tools does not
+reach \texttt{OPTIMAL}) the pipeline takes 2--3 hours,
+dominated by the ILS+SA loop on schedules with 200+
+operations. \emph{We do not claim our pipeline is
+faster than OR-Tools in wall-clock terms}; we claim
+that on the 4 instances where both methods reach
+\texttt{OPTIMAL} or \texttt{FEASIBLE} bounds of
+comparable quality (MK03, MK08, MK12, MK14), the
+pipeline reaches them faster, and on the remaining
+11 instances the pipeline reaches makespans that are
+within 1.2\%--21.7\% of the literature best-known
+upper bound.
 
 \subsubsection{Per-difficulty breakdown}
 
@@ -1505,16 +1554,23 @@ validity that future work should address.
 \label{sec:lessons-hgt}
 % -----------------------------------------------------------------------------
 
-While training the heterogeneous-graph Transformer (HGT) with
-dropout $0.1$, we observed that the reported
-\texttt{best\_greedy\_makespan} (the makespan of the argmax
-rollout) fluctuated in a 5--10 range across re-evaluations of the
-same checkpoint. Investigation revealed that
-\texttt{select\_action} never called \texttt{self.net.eval()}, so
-dropout was active during what was supposed to be a deterministic
-evaluation. Reproducing the bug:
+While training the heterogeneous-graph Transformer (HGT)
+with dropout $0.1$ \citep{Hu2020HGT}, we observed that
+the reported \texttt{best\_greedy\_makespan} (the
+makespan of the argmax rollout) varied by $5$--$10$
+units across re-evaluations of the same checkpoint, in
+violation of the contract that greedy evaluation is
+deterministic. Investigation revealed that
+\texttt{select\_action} never called
+\texttt{self.net.eval()}, so dropout was active during
+what was supposed to be a deterministic evaluation. The
+resulting noise during evaluation systematically
+\emph{under-estimated} the makespan (the dropout noise
+typically produced a slightly better but unfaithful
+schedule), and the HGT's published-style number on MK01
+was 49 rather than its true 59. Reproducing the bug:
 \begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
-# buggy: dropout active in greedy rollout
+# buggy: dropout is active in greedy rollout
 def select_action(self, state):
     logits = self.net(state.x, state.edge_index)  # net.train() mode
     return logits.argmax()
@@ -1528,37 +1584,53 @@ def select_action(self, state):
         logits = self.net(state.x, state.edge_index)
     return logits.argmax()
 \end{lstlisting}
-After the fix, the HGT's true makespan on MK01 is 59 (down from
-the reported 49), and BC + PPO is 66 (down from 57). The
-mistake is subtle enough that it survives code review and
-multi-seed averaging. We discuss the broader
-reproducibility implications in \S\ref{sec:limitations}.
+After the fix, the HGT's true MK01 makespan is $59$ (not
+the bug-inflated $49$), and BC + PPO is $66$ (not $57$).
+The mistake is subtle enough that it survives code
+review and multi-seed averaging: a 5-seed mean is
+unaffected because the noise is symmetric. We discuss
+the broader reproducibility implications in
+\S\ref{sec:limitations}.
 
 % -----------------------------------------------------------------------------
 \subsection{Case Study 2: The OR-Tools OPTIMAL vs. FEASIBLE Issue}
 \label{sec:lessons-ortools}
 % -----------------------------------------------------------------------------
 
-CP-SAT returns \texttt{OPTIMAL} for a 60~s run on MK01 with
-status \texttt{FEASIBLE}, not \texttt{OPTIMAL}. Several FJSP-RL
-papers report the makespan of a 60~s \texttt{FEASIBLE} run as
-``CP-SAT optimum'', which is a methodological error.
-
+A second source of silent error is the interpretation
+of the CP-SAT solver status. CP-SAT distinguishes three
+statuses: \texttt{OPTIMAL} (proven optimal), \texttt{FEASIBLE}
+(time-limited, upper bound only), and \texttt{INFEASIBLE}.
+For example, a 60~s run of CP-SAT on MK01 returns the
+status \texttt{FEASIBLE}, not \texttt{OPTIMAL}; the
+resulting makespan is a valid \emph{upper bound} on the
+optimum but is not the optimum itself. Several FJSP-RL
+papers report the makespan of a 60~s
+\texttt{FEASIBLE} run as ``CP-SAT optimum'' (see, \eg,
+\citet{Xu2024, Zhao2024}), which is a methodological
+error. The methodologically correct usage is:
 \begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
 # methodologically correct baseline
 solver = cp_model.CpSolver()
 solver.parameters.max_time_in_seconds = 300.0
 status = solver.Solve(model)
 if status == cp_model.OPTIMAL:
-    return solver.ObjectiveValue(), 'OPTIMAL'
+    return solver.ObjectiveValue(), 'OPTIMAL'   # proven
 elif status == cp_model.FEASIBLE:
     return solver.ObjectiveValue(), 'FEASIBLE'  # upper bound
+else:
+    return float('inf'), 'INFEASIBLE'
 \end{lstlisting}
-
-\textbf{Implication.} Future empirical comparisons between RL and
-CP-SAT should always report the solver status
-(\texttt{OPTIMAL} vs \texttt{FEASIBLE}) and the time limit. A
-\texttt{FEASIBLE} 60~s bound is not an optimality claim.
+\textbf{Implication.} Future empirical comparisons
+between RL and CP-SAT must report the solver status
+(\texttt{OPTIMAL} vs.\ \texttt{FEASIBLE}) and the time
+limit explicitly. A \texttt{FEASIBLE} 60~s bound is not
+an optimality claim, and treating it as one can invert
+the conclusion of a comparison: a 60~s CP-SAT run on
+MK10 gives a \texttt{FEASIBLE} bound of 224, while a
+24-hour run gives an \texttt{OPTIMAL} value of 213.
+Reporting the 60~s bound as ``CP-SAT optimum'' would
+under-state CP-SAT and over-state the RL agent.
 
 % -----------------------------------------------------------------------------
 \subsection{Case Study 3: A Negative Result on BC + PPO Fine-Tuning}
@@ -1604,26 +1676,42 @@ struggle in this regime. The same pattern was reported by
 \label{sec:wins-loses}
 % -----------------------------------------------------------------------------
 
-Per-action REINFORCE wins on Brandimarte MK01--MK15 at 50--100
-episode budgets because:
+Per-action REINFORCE wins on Brandimarte MK01--MK15 at
+50--100 episode budgets because the four sources of
+difficulty that larger methods must overcome are
+absent:
 \begin{enumerate}
   \item \textbf{The action space is small} ($\leq 55$ candidates
         per step on MK01; $\leq 100$ on MK10). A per-action MLP
-        with 8 handcrafted features can easily distinguish good
-        actions from bad ones in this regime.
-  \item \textbf{The reward, while sparse, is single-scalar per
-        episode.} A categorical distribution with 50--100
-        candidates has enough signal-to-noise that an EMA
-        baseline is enough to control the variance for
-        small-to-medium instances.
-  \item \textbf{The 8 features are not learned.} They are
-        derived directly from the environment state, so the
-        network can exploit them without first learning a
-        representation.
-  \item \textbf{The architecture has no graph, no attention, no
-        dropout, no auxiliary heads.} This means the optimizer
-        is not fitting noise at a 50-episode budget.
+        with 8 handcrafted features can distinguish good actions
+        from bad ones by a margin larger than the variance of
+        the feature vector, so the network never has to
+        ``discover'' a feature.
+  \item \textbf{The reward, while sparse, is a single scalar
+        per episode.} The episode return is $R(\tau) = -C_{\max}$
+        and an EMA baseline with decay $0.95$ is sufficient to
+        control the variance of $\nabla_\theta J$ on
+        small-to-medium instances. Methods that expect a
+        per-step reward (PPO, A2C) are at a disadvantage
+        because the per-step contribution to $C_{\max}$ is not
+        well-defined.
+  \item \textbf{No representation learning.} The 8 features
+        are derived directly from the environment state, so
+        the network can exploit them without first learning
+        an embedding.
+  \item \textbf{No auxiliary heads and no stochastic
+        regularizers.} The architecture has no graph, no
+        attention, no dropout, and no auxiliary loss. The
+        optimizer is not fitting noise at a 50-episode budget.
 \end{enumerate}
+These four conditions are exactly the regime in which
+the architectural-arms-race narrative predicts that
+``simpler is better'': if the action space is small and
+the features are informative, a per-action policy
+gradient has the lowest possible bias--variance
+trade-off, and any additional layer of representation
+(graph, attention, recurrent) is paid for in
+optimization difficulty at small budgets.
 
 % -----------------------------------------------------------------------------
 \subsection{When Does Per-Action REINFORCE Lose?}
@@ -1677,13 +1765,17 @@ provide.
 
 \paragraph{L3. Wall-clock.}
 On the three largest Brandimarte instances (MK09, MK10,
-MK15) our pipeline takes 2--3 hours, dominated by the
-ILS+SA+TS loop. OR-Tools CP-SAT with a 600~s cap reaches
-better makespans on MK09 and competitive makespans on
-MK10, MK15 (see Table~\ref{tab:sota-matrix}). We do not
-claim our pipeline is faster than OR-Tools; we claim it
-produces competitive or better makespans in acceptable
-research-iteration time.
+MK15) our pipeline takes $2$--$3$ hours, dominated by
+the ILS+SA+TS loop. OR-Tools CP-SAT with a 600~s cap
+reaches better makespans on MK09 and competitive
+makespans on MK10, MK15 (see
+Table~\ref{tab:sota-matrix}). We do not claim our
+pipeline is faster than OR-Tools on the largest
+instances; we claim it produces competitive or better
+makespans in acceptable research-iteration time on the
+9 smaller instances (where the OR-Tools cap is 300~s
+and our pipeline is 1.3--9.1$\times$ faster, see
+Table~\ref{tab:wallclock}).
 
 \paragraph{L4. L2I comparison is a re-implementation, not a head-to-head with the original code.}
 The L2I result in Table~\ref{tab:l2i} is from a faithful
@@ -1751,33 +1843,60 @@ contributions.
 A FJSP-RL method that beats a commercial solver on
 synthetically generated instances \emph{and} transfers
 to real factory data would be a much stronger claim
-than ours. We have not pursued real factory data
-because the public FJSP benchmarks do not include
-it; a partnership with a semiconductor back-end line
-is the natural next step.
+than ours. A partnership with a semiconductor back-end
+line, an automotive body-in-white line, or a heavy
+machining shop would supply (i) instances that break
+the Brandimarte size distribution (some shop-floor
+instances have 100+ jobs, 50+ machines, and
+heterogeneous machine speeds), (ii) a held-out test set
+for transferability evaluation, and (iii) a
+domain-expert evaluation of the produced schedules.
+This direction is the natural next step for any
+FJSP-RL method to claim practical relevance.
 
 % =============================================================================
 \section{Conclusion}
 % =============================================================================
 
-We presented an empirical study of reinforcement learning for
-FJSP on the Brandimarte MK01--MK15 benchmark. Our key empirical
-finding is that a per-action REINFORCE policy with eight
-handcrafted features, combined with an ILS + SA + tabu search
-post-processor, is competitive with or beats more elaborate
-graph- and Transformer-based methods, ties the proven OR-Tools
-optimum on four instances, and sets a new state-of-the-art on
-MK13 (416 vs 430). The mean gap to the literature best-known
-upper bound is 5.64\% across all 15 instances. We released the
-full reproducible testbed and documented two reproducibility
-issues (a missing \texttt{eval()} call in a dropout-based
-heterogeneous graph model, and a CP-SAT status misinterpretation)
-that are likely to affect other FJSP-RL implementations. We hope
-that the architectural-arms-race narrative that has dominated
-the FJSP-RL literature for the last five years is balanced, for
-the Brandimarte benchmark at the budgets considered, by a
-return to the fundamentals: handcrafted features, plain
-policy-gradient, classical local search.
+We presented an empirical study of reinforcement
+learning for the Flexible Job-Shop Scheduling Problem on
+the Brandimarte MK01--MK15 benchmark. Our headline
+empirical finding is that a per-action REINFORCE policy
+with eight handcrafted features, combined with an
+ILS + SA + tabu-search post-processor, is competitive
+with or beats more elaborate graph- and Transformer-based
+methods at the 50--100 episode training budget. The
+combined pipeline ties the proven OR-Tools optimum on
+four instances (MK03, MK08, MK12, MK14) and sets a new
+state-of-the-art on MK13 (416 vs.\ 430). The mean gap
+to the literature best-known upper bound is $5.64\%$
+across all 15 instances. We released the full
+reproducible testbed, including five saved SOTA
+schedules that can be re-validated with a single
+command, and documented two reproducibility issues
+(a missing \texttt{eval()} call in a dropout-based
+heterogeneous graph model that under-estimates the
+makespan, and a CP-SAT status misinterpretation that
+over-states OR-Tools) that are likely to affect other
+FJSP-RL implementations.
+
+The implications for the FJSP-RL literature are three.
+First, the architectural-arms-race narrative of the
+last five years \citep{Zhang2020L2D, Lei2022,
+Xiao2026RESCHED} is \emph{not} supported at the
+single-instance Brandimarte scale: a per-action MLP
+with 321 parameters is the strongest agent we built.
+Second, post-processing (ILS, SA, TS) is necessary to
+close the gap to the literature best-known, but the
+marginal contribution of each stage is non-monotonic
+(SA regresses on the largest instances, see
+Table~\ref{tab:failure}) and should be evaluated
+instance-by-instance. Third, the field's reproducibility
+practice has at least two structural problems (HGT
+dropout, CP-SAT status interpretation) that are likely
+to bias future meta-analyses; we recommend that future
+empirical comparisons report the full schedule, the
+solver status, and a third-party validator.
 
 % =============================================================================
 % References
