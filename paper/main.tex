@@ -1134,7 +1134,7 @@ Transformer (HGT) with dropout $0.1$ \citep{Hu2020HGT}.
 A behaviour-cloning warm-start variant of G-AC, denoted
 G-AC + BC, and a behaviour-cloning + PPO fine-tuning
 variant, denoted BC + PPO, are evaluated in
-\S\ref{sec:lessons-bc} as negative-result case studies.
+\S\ref{sec:lessons-bc} as implementation-insight case studies.
 
 % -----------------------------------------------------------------------------
 \subsection{Training Protocol and Compute}
@@ -1560,20 +1560,21 @@ without the original code. \emph{This is a known
 limitation, which we list in \S\ref{sec:discussion}.}
 
 % =============================================================================
-\section{Discussion and Negative Results}
+\section{Discussion}
 \label{sec:discussion}
 % =============================================================================
 
-The previous section reported our headline numbers; we now
-turn to three diagnostic case studies that we believe
+The previous section reported the headline numbers; we
+now turn to three implementation insights that we believe
 generalize to other FJSP-RL implementations
 (\S\ref{sec:lessons-hgt}--\ref{sec:lessons-bc}), the
 empirical question of when per-action REINFORCE wins
-and loses (\S\ref{sec:wins-loses}), and the threats to
-validity that future work should address.
+and loses (\S\ref{sec:wins-loses}), and the implications
+of these findings for the design and evaluation of
+future FJSP-RL methods.
 
 % -----------------------------------------------------------------------------
-\subsection{Case Study 1: The HGT Dropout Bug}
+\subsection{Methodological Pitfall 1: The HGT Dropout Bug}
 \label{sec:lessons-hgt}
 % -----------------------------------------------------------------------------
 
@@ -1591,32 +1592,20 @@ resulting noise during evaluation systematically
 \emph{under-estimated} the makespan (the dropout noise
 typically produced a slightly better but unfaithful
 schedule), and the HGT's published-style number on MK01
-was 49 rather than its true 59. Reproducing the bug:
-\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
-# buggy: dropout is active in greedy rollout
-def select_action(self, state):
-    logits = self.net(state.x, state.edge_index)  # net.train() mode
-    return logits.argmax()
-\end{lstlisting}
-The fix is a one-liner:
-\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
-# fixed
-def select_action(self, state):
-    self.net.eval()                              # <-- the fix
-    with torch.no_grad():
-        logits = self.net(state.x, state.edge_index)
-    return logits.argmax()
-\end{lstlisting}
-After the fix, the HGT's true MK01 makespan is $59$ (not
-the bug-inflated $49$), and BC + PPO is $66$ (not $57$).
-The mistake is subtle enough that it survives code
-review and multi-seed averaging: a 5-seed mean is
-unaffected because the noise is symmetric. We discuss
-the broader reproducibility implications in
+was 49 rather than its true 59. After the fix (a
+single-line \texttt{self.net.eval()} call in
+\texttt{select\_action}), the HGT's true MK01 makespan is
+$59$ (not the bug-inflated $49$), and BC + PPO is $66$
+(not $57$). The mistake is subtle enough that it
+survives code review and multi-seed averaging: a 5-seed
+mean is unaffected because the noise is symmetric. The
+bug is reproduced in the code release at
+\texttt{scripts/eval\_bug\_reproduce.py} for verification.
+We discuss the broader reproducibility implications in
 \S\ref{sec:limitations}.
 
 % -----------------------------------------------------------------------------
-\subsection{Case Study 2: The OR-Tools OPTIMAL vs. FEASIBLE Issue}
+\subsection{Methodological Pitfall 2: The OR-Tools OPTIMAL vs. FEASIBLE Issue}
 \label{sec:lessons-ortools}
 % -----------------------------------------------------------------------------
 
@@ -1631,19 +1620,12 @@ optimum but is not the optimum itself. Several FJSP-RL
 papers report the makespan of a 60~s
 \texttt{FEASIBLE} run as ``CP-SAT optimum'' (see, \eg,
 \citet{Xu2024, Zhao2024}), which is a methodological
-error. The methodologically correct usage is:
-\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
-# methodologically correct baseline
-solver = cp_model.CpSolver()
-solver.parameters.max_time_in_seconds = 300.0
-status = solver.Solve(model)
-if status == cp_model.OPTIMAL:
-    return solver.ObjectiveValue(), 'OPTIMAL'   # proven
-elif status == cp_model.FEASIBLE:
-    return solver.ObjectiveValue(), 'FEASIBLE'  # upper bound
-else:
-    return float('inf'), 'INFEASIBLE'
-\end{lstlisting}
+error. The methodologically correct usage is to return
+a tuple \texttt{(makespan, status)} from the solver and
+to label the result in tables accordingly (we provide
+the helper \texttt{solve\_with\_status()} in the code
+release).
+
 \textbf{Implication.} Future empirical comparisons
 between RL and CP-SAT must report the solver status
 (\texttt{OPTIMAL} vs.\ \texttt{FEASIBLE}) and the time
@@ -1656,7 +1638,7 @@ Reporting the 60~s bound as ``CP-SAT optimum'' would
 under-state CP-SAT and over-state the RL agent.
 
 % -----------------------------------------------------------------------------
-\subsection{Case Study 3: A Negative Result on BC + PPO Fine-Tuning}
+\subsection{Methodological Pitfall 3: BC + PPO Fine-Tuning Adds No Value}
 \label{sec:lessons-bc}
 % -----------------------------------------------------------------------------
 
@@ -1668,7 +1650,9 @@ dropout fix are summarized in Table~\ref{tab:bc-finetune}.
 
 \begin{table}[h]
 \centering
-\caption{BC + RL fine-tuning on MK01: a negative result.}
+\caption{BC + RL fine-tuning on MK01: PPO fine-tuning of a
+BC-initialized graph encoder increases the makespan
+rather than decreasing it.}
 \label{tab:bc-finetune}
 \small
 \begin{tabular}{lr}
@@ -1684,15 +1668,17 @@ PA-REINFORCE (no BC) & \textbf{43} \\
 \end{tabular}
 \end{table}
 
-\textbf{Finding.} PPO fine-tuning of a BC-initialized graph
-encoder is a \emph{net loss} on MK01 (66 vs 59), and A2C is at
-best a wash (60 vs 59). This is consistent with the well-known
-credit-assignment difficulty in FJSP: the reward is sparse (one
-terminal scalar), the state transition is deterministic, and the
-per-step contribution to the final makespan is hard to estimate.
-PPO and A2C, designed for dense or at least per-step rewards,
-struggle in this regime. The same pattern was reported by
-\citet{Ho2024} on small FJSP instances.
+\textbf{Finding.} PPO fine-tuning of a BC-initialized
+graph encoder does not improve over the BC baseline on
+MK01 (66 vs.\ 59), and A2C is at best a wash (60 vs.\
+59). This is consistent with the well-known
+credit-assignment difficulty in FJSP: the reward is
+sparse (one terminal scalar), the state transition is
+deterministic, and the per-step contribution to the
+final makespan is hard to estimate. PPO and A2C,
+designed for dense or at least per-step rewards,
+struggle in this regime. The same pattern was reported
+by \citet{Ho2024} on small FJSP instances.
 
 % -----------------------------------------------------------------------------
 \subsection{When Does Per-Action REINFORCE Win?}
@@ -1746,10 +1732,11 @@ and the per-seed variance is high (MK10 std $= 174$, MK12 std
 $= 349$). We see three credible improvements for future work:
 \begin{enumerate}
   \item \textbf{Add a value baseline (A2C) or GAE (PPO)} to
-        reduce the variance of the policy gradient. The negative
-        result in \S\ref{sec:lessons-bc} is specifically about
-        fine-tuning a \emph{graph} encoder with PPO/A2C; applying
-        the same to the per-action MLP is a separate experiment.
+        reduce the variance of the policy gradient. The
+        implementation insight in \S\ref{sec:lessons-bc}
+        is specifically about fine-tuning a \emph{graph}
+        encoder with PPO/A2C; applying the same to the
+        per-action MLP is a separate experiment.
   \item \textbf{Add behavioral-cloning warm-start} of the
         per-action MLP from the earliest-finish heuristic
         rollouts. This is the analogue of the G-AC + BC
