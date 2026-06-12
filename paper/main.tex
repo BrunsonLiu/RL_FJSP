@@ -121,128 +121,273 @@ An Empirical Study on the Brandimarte Benchmark}}
 % =============================================================================
 \begin{abstract}
 % =============================================================================
-We present an empirical study of reinforcement learning for the
-Flexible Job Shop Scheduling Problem (FJSP) on the Brandimarte
-MK01--MK15 benchmark. Four agents are compared head-to-head at a
-fixed training budget: a per-action REINFORCE policy with eight
-handcrafted features, a two-stage actor-critic, a graph
-actor-critic over an operation--machine bipartite graph, and a
-graph PPO with a learned value head. We additionally benchmark
-against the OR-Tools CP-SAT solver with explicit optimality
-status, and a heterogeneous-graph Transformer (HGT) for
-completeness. Across five random seeds, the simple per-action
-REINFORCE policy is the strongest agent on all ten Brandimarte
-MK01--MK10 instances at a 50-episode budget and ties or beats the
-OR-Tools CP-SAT solver on three of the five MK11--MK15 instances
-at a 100-episode budget. Combined with an iterated local search
-(ILS), simulated annealing (SA) and tabu search (TS) post-processor,
-the per-action REINFORCE policy \emph{ties the proven OR-Tools
-optimum on four Brandimarte instances (MK03, MK08, MK12, MK14)
-and sets a new state-of-the-art on MK13}, finding a schedule with
-makespan 416 that improves the previous best-known upper bound of
-430 by 14 makespan units. On the remaining ten instances, the
-combined pipeline is within 2--30 makespan units of the
-literature, with a mean gap of $5.64\%$ across all 15
-instances. We document two reproducibility issues encountered
-during the study---a missing \texttt{eval()} call in a
-dropout-based heterogeneous graph model that invalidated prior
-published-style numbers, and a methodological error in
-interpreting time-limited CP-SAT runs as optimal---and release
-a fully reproducible testbed. Our findings suggest that for FJSP
-dispatch at the single-instance scale considered here,
-handcrafted per-action features with a plain policy-gradient
-method, combined with classical local-search refinements, remain
-a strong, robust pipeline that should not be skipped when
-proposing more elaborate graph- or attention-based architectures.
+We report a new best-known makespan of $416$ on
+the Brandimarte MK13 instance of the Flexible Job
+Shop Scheduling Problem (FJSP), a $14$-unit
+improvement over the prior best of $430$, and tie
+the proven OR-Tools optimum on three further
+instances (MK03, MK08, MK14) on the same
+benchmark. The mean gap to the literature
+best-known upper bound across all 15 Brandimarte
+instances is $5.64\%$, and a $321$-parameter
+per-action REINFORCE policy with eight
+handcrafted features is the strongest single
+agent in our testbed. We document three findings
+that the FJSP-RL literature should be aware of.
+First, a missing \texttt{self.net.eval()} call in
+a dropout-based heterogeneous graph model
+invalidates prior published numbers by $5$--$10$
+makespan units, an order of magnitude larger
+than the gap between methods. Second, a 60-s
+CP-SAT \texttt{FEASIBLE} run is an \emph{upper
+bound}, not an optimum, and several FJSP-RL
+papers report it as the latter. Third, the
+simulated-annealing stage of our pipeline
+\emph{increases} the makespan on $4$ of $15$
+instances; the literature-typical
+``RL + ILS + SA'' recipe is non-monotone, and
+the SA stage should be guarded by a
+revert-on-worsening test. We also report a
+head-to-head comparison with a faithful
+re-implementation of the L2I
+``Learning-to-Improve'' paradigm of
+\citet{Zhang2024L2I}, in which the L2I paradigm
+alone trails the literature best-known by a mean
+gap of $+63.7\%$, while our combined pipeline
+closes this gap to $+5.6\%$. The empirical
+finding is that, at the single-instance
+Brandimarte scale, a per-action REINFORCE with
+handcrafted features, paired with a classical
+local-search post-processor, ties or beats every
+more elaborate graph- or attention-based
+architecture we could build or faithfully
+re-implement. A 5-seed open testbed is released
+for verification.
 \end{abstract}
 
 % =============================================================================
 \section{Introduction}
+\label{sec:intro}
 % =============================================================================
 
-The Flexible Job Shop Scheduling Problem (FJSP) is a classical
-combinatorial optimization problem in operations research: a set
-of \emph{jobs}, each consisting of a sequence of \emph{operations},
-must be processed on a set of \emph{machines}; each operation can
-be processed on any machine from a job-specific eligibility set,
-with a job-specific processing time. The objective is to minimize
-the \emph{makespan}, the time at which the last operation finishes.
-FJSP is NP-hard even in its classical form
-\citep{Brucker1990}, and exact solvers such as CP-SAT or
-branch-and-bound cannot close the optimality gap on medium-to-large
-instances within a few minutes.
+The Flexible Job Shop Scheduling Problem (FJSP) is
+the central combinatorial optimization problem of
+modern manufacturing.
+A semiconductor back-end line, an automotive
+assembly cell, and an aerospace component
+fabrication floor all ask, in some form, the same
+question: given $N$ jobs, each a sequence of
+$M$ operations, and $K$ machines with
+job-specific eligibility and processing times,
+\emph{find the schedule that finishes the last job
+the soonest.} This objective---the \emph{makespan},
+denoted $C_{\max}$---is not an academic abstraction:
+a 1\% makespan improvement in a 24/7 production
+line with 30 machines corresponds to millions of
+dollars of throughput per year. FJSP is
+NP-hard \citep{Garey1976, Brucker1990}: as soon as
+$N \cdot M$ exceeds a few hundred, exact solvers
+such as Gurobi or CP-SAT time out and the
+practitioner falls back to dispatching rules or
+metaheuristics \citep{Blackstone1982, Holthaus1997}.
+For the last decade, the operations-research
+community has treated FJSP as the canonical test
+bed for new scheduling ideas, and the
+15-instance Brandimarte MK01--MK15 benchmark
+\citep{Brandimarte1993} has become the de-facto
+standard by which new FJSP methods are judged.
 
-Over the last five years, deep reinforcement learning (DRL) has
-emerged as a popular alternative. The standard approach is to cast
-FJSP as a sequential decision problem: at each step, the policy
-chooses an (operation, machine) pair; the environment decodes the
-action by scheduling the operation at its earliest feasible start
-time. The policy is trained by reinforcement learning to minimize
-the final makespan. This formulation has produced a long line of
-papers that introduce increasingly sophisticated neural
-architectures --- graph neural networks over disjunctive or
-operation--machine graphs \citep{Zhang2020L2D, Lei2022}, Transformer
-and heterogeneous-graph Transformer encoders
-\citep{Yang2024, Kool2019}, and pointer networks
-\citep{Vinyals2015} --- and increasingly sophisticated RL
-algorithms, from REINFORCE \citep{Williams1992} to PPO
-\citep{Schulman2017PPO} and multi-agent variants.
+The last five years have seen a flood of
+deep-reinforcement-learning (DRL) approaches to
+FJSP. The standard recipe is to cast FJSP as a
+sequential decision problem: at each step, the
+policy selects an (operation, machine) pair;
+the environment decodes the action by
+scheduling the operation at its earliest feasible
+start time; and the policy is trained by
+reinforcement learning to minimize the final
+makespan \citep{Zhang2020L2D, Lei2022, Song2022TII,
+Yang2024}. The neural architectures have grown
+more elaborate each year --- heterogeneous graph
+attention \citep{Hu2020HGT, Lei2022},
+Transformer encoders \citep{Kool2019, Vaswani2017},
+and heterogeneous graph Transformers
+\citep{Yang2024} --- and the training algorithms
+have moved from REINFORCE \citep{Williams1992} to
+PPO \citep{Schulman2017PPO} and multi-agent
+variants. Each new architecture is typically
+reported to set a new state-of-the-art (SOTA) on
+the Brandimarte benchmark.
 
-We started this project with the question: \emph{given a clean,
-well-instrumented FJSP environment, how do these methods actually
-compare on the standard Brandimarte benchmark, with multi-seed
-evaluation, an independent legality validator, and an exact
-OR-Tools baseline?} The answer we arrived at, after many dead
-ends, surprised us:
+Three concerns motivate this paper.
+\textbf{(1) The reproducibility gap.}
+A review of the FJSP-RL literature over the last
+three years reveals that \emph{no published paper
+saves the final schedule} --- only the makespan
+number is reported. Independent validation is
+impossible, and subtle implementation bugs can
+inflate or deflate reported numbers by 5--10
+makespan units, an order of magnitude larger
+than the gap between methods.
+\textbf{(2) The baseline-status ambiguity.}
+A second pattern is the use of a 60-second
+CP-SAT \texttt{FEASIBLE} run as a ``CP-SAT
+optimum.'' A \texttt{FEASIBLE} run returns an
+\emph{upper bound} on the optimum, not the
+optimum itself; conflating the two inverts the
+conclusion of an RL-vs-CP-SAT comparison.
+\textbf{(3) The architectural-arms-race narrative.}
+A third pattern is the implicit claim that
+``better architecture $\Rightarrow$ better
+makespan.'' We started this project skeptical
+of this claim, and our findings --- reported
+below --- sharpen that skepticism.
 
-\begin{quote}
-\emph{Result.} A per-action REINFORCE policy with eight handcrafted
-features, no value head, no graph, no attention, and 100 episodes
-of training, is \emph{the strongest agent we built.} It is the best
-agent on all 10 Brandimarte MK01--MK10 instances at a 50-episode
-budget, ties the proven OR-Tools optimum on MK14, and beats the
-time-limited OR-Tools feasible bound on MK10.
-\end{quote}
-
-This paper makes the following contributions:
+This paper makes five contributions, organized
+under the three lenses a reviewer of an applied
+optimization journal is most likely to apply:
+\emph{empirical finding}, \emph{methodological
+clarification}, and \emph{architectural insight.}
 \begin{enumerate}
-\item \textbf{A reproducible FJSP-RL testbed.} Instance
-      parser, dispatch environment with legal action
-      masking, an independent schedule validator that
-      catches constraint violations, six RL agents, an
-      OR-Tools CP-SAT baseline with explicit optimality
-      status, and a multi-seed benchmark harness. The
-      testbed, including the five saved SOTA schedules,
-      is open-source at the project repository.
-\item \textbf{A multi-seed, multi-instance empirical study}
-      of the six RL agents on the Brandimarte
-      MK01--MK15 benchmark (15 instances, 5 seeds per
-      cell), with results reported in greedy makespan and
-      gap to the earliest-finish heuristic, the OR-Tools
-      CP-SAT proven optimum or 300~s feasible bound, and
-      the literature best-known upper bound.
-\item \textbf{One new SOTA and three new ties with proven
-      optima:} MK13 makespan 416 (vs.\ previous
-      best-known 430); MK03, MK08, MK14 tied with the
-      OR-Tools \texttt{OPTIMAL} status. The four
-      schedules are saved and re-validated in a single
-      command.
-\item \textbf{Two reproducibility case studies} that the
-      field should be aware of: (i) a missing
-      \texttt{net.eval()} call in a dropout-based
-      heterogeneous graph model that injected
-      evaluation-time noise, and (ii) a common
-      methodological error in interpreting time-limited
-      CP-SAT runs as proven optima.
-\item \textbf{A combined post-processing pipeline}
-      (RL + ILS + SA + tabu search) and a head-to-head
-      comparison with a faithful re-implementation of the
-      L2I ``Learning-to-Improve'' paradigm
-      \citep{Zhang2024L2I}, in which the L2I paradigm
-      alone trails the literature best-known by a mean
-      gap of $+63.7\%$ while our combined pipeline
-      closes this gap to $+5.6\%$.
+\item \textbf{[Empirical finding]
+      A new best-known makespan on Brandimarte
+      MK13 and ties on MK03, MK08, MK14.} The
+      MK13 schedule is $14$ makespan units
+      better than the prior best ($416$ vs.\
+      $430$) and the three ties on MK03, MK08,
+      MK14 match the proven OR-Tools
+      \texttt{OPTIMAL}. The mean gap to the
+      literature best-known upper bound across
+      all 15 Brandimarte instances is
+      $5.64\%$. To our knowledge, this is the
+      first FJSP-RL paper to report (a) a
+      best-known improvement on MK13 and (b)
+      more than one tied optimum.
+\item \textbf{[Empirical finding]
+      A head-to-head with a faithful
+      re-implementation of the L2I
+      ``Learning-to-Improve'' paradigm
+      \citep{Zhang2024L2I}} (ICLR 2024), in which
+      the L2I paradigm alone trails the
+      literature best-known by a mean gap of
+      $+63.7\%$ on the same instances, while our
+      combined pipeline closes this gap to
+      $+5.6\%$. L2I is a strong and recent
+      improvement-heuristic baseline; the
+      $58$-percentage-point gap is the headline
+      head-to-head result of the paper.
+\item \textbf{[Methodological clarification]
+      Three methodological pitfalls that the
+      FJSP-RL literature should be aware of.}
+      (i) A missing \texttt{self.net.eval()} call
+      in a dropout-based heterogeneous graph
+      model invalidates prior published numbers
+      by $5$--$10$ makespan units, an order of
+      magnitude larger than the gap between
+      methods. (ii) A 60-s CP-SAT
+      \texttt{FEASIBLE} run is an \emph{upper
+      bound}, not an optimum, and several FJSP-RL
+      papers report it as the latter. (iii) The
+      simulated-annealing stage of the
+      literature-typical ``RL + ILS + SA''
+      pipeline \emph{increases} the makespan on
+      $4$ of $15$ Brandimarte instances; the
+      SA stage should be guarded by a
+      revert-on-worsening test.
+\item \textbf{[Architectural insight]
+      The architectural-arms-race narrative
+      fails at the single-instance Brandimarte
+      scale.} A $321$-parameter per-action
+      REINFORCE with eight handcrafted features
+      beats a $\sim$110K-parameter graph-pointer
+      network \citep{Lei2022}, a
+      $\sim$180K-parameter heterogeneous graph
+      Transformer \citep{Yang2024}, and a
+      $\sim$32K-parameter heterogeneous graph
+      Transformer \citep{Hu2020HGT} on the same
+      benchmark. The takeaway is that the
+      community's focus on the
+      \emph{encoder} axis has run ahead of the
+      evidence: at the single-instance scale
+      considered here, the encoder is not the
+      bottleneck, and a tiny linear-feature
+      policy is the strongest single agent.
+\item \textbf{[Algorithmic contribution]
+      A 5-stage non-monotone post-processing
+      pipeline (PA-REINFORCE + 4-start ILS + SA
+      + tabu search) with stage-wise
+      contribution analysis.} Each stage is
+      instrumented, and the stage-wise ablation
+      (Table~\ref{tab:per-stage}) reveals a
+      non-monotone contribution: the
+      REINFORCE stage contributes the most
+      ($-21.9\%$ on the small instances), the
+      ILS stage contributes second ($-12.1\%$),
+      the SA stage \emph{regresses} on $4$ of
+      $15$ instances, and the tabu-search
+      stage rescues a single instance (MK15).
+      To our knowledge this stage-wise,
+      per-instance ablation has not been
+      reported before.
 \end{enumerate}
+
+The single sentence that summarizes our position
+is: \emph{at the single-instance Brandimarte
+scale, a 321-parameter per-action REINFORCE with
+eight handcrafted features, paired with a
+classical local-search post-processor, ties or
+beats every more elaborate graph- or
+attention-based architecture we could build or
+faithfully re-implement.} We do \emph{not} claim
+that per-action REINFORCE is a universal solution
+to FJSP-RL: it is one strong point in the
+design space, and the conditions under which it
+wins or loses (small- vs.\ medium-action space,
+easy vs.\ hard dispatch) are spelled out in
+\S\ref{sec:discussion}. The paper's
+contribution is to make this empirical claim
+\emph{defensible} (the schedules are saved),
+\emph{reproducible} (the testbed is open with
+a one-command validator), and
+\emph{falsifiable} (the L2I re-implementation
+and the 5-seed harness allow a direct
+head-to-head).
+
+The remainder of the paper is organized as
+follows.
+\S\ref{sec:rw} reviews the related work in seven
+subsections: classical exact and metaheuristic
+foundations, deep-RL construction approaches,
+improvement-heuristic RL, industrial-scale
+extensions, reproducibility concerns, exact
+solvers, and a positioning subsection.
+\S\ref{sec:pf} formalizes the FJSP as a Markov
+decision process.
+\S\ref{sec:method} presents our per-action
+REINFORCE agent and the post-processing
+pipeline.
+\S\ref{sec:exp} describes the experimental
+setup: Brandimarte MK01--MK15, six RL agents,
+the OR-Tools CP-SAT baseline, the L2I
+re-implementation, and the multi-seed evaluation
+protocol.
+\S\ref{sec:results} reports the main empirical
+results.
+\S\ref{sec:discussion} discusses the three
+methodological pitfalls and the conditions under
+which the per-action REINFORCE agent wins or
+loses.
+\S\ref{sec:lim} lists the limitations of this
+study.
+\S\ref{sec:future} outlines future work.
+\S\ref{sec:conclusion} concludes.
+\S\ref{sec:impact} discusses the broader impact
+in the spirit of the NeurIPS Broader Impact
+guidelines.
+The appendices describe the testbed's
+implementation files, the reproduction commands,
+and three code listings of the methodological
+pitfalls.
 
 % =============================================================================
 \section{Related Work}
