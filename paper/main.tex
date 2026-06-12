@@ -1601,8 +1601,10 @@ $59$ (not the bug-inflated $49$), and BC + PPO is $66$
 survives code review and multi-seed averaging: a 5-seed
 mean is unaffected because the noise is symmetric. The
 bug is reproduced in the code release at
-\texttt{scripts/eval\_bug\_reproduce.py} for verification.
-We discuss the broader reproducibility implications in
+\texttt{scripts/eval\_bug\_reproduce.py} for verification
+(see the full buggy and fixed code listings in
+Appendix~\ref{app:code}). We discuss the broader
+reproducibility implications in
 \S\ref{sec:limitations}.
 
 % -----------------------------------------------------------------------------
@@ -1625,7 +1627,8 @@ error. The methodologically correct usage is to return
 a tuple \texttt{(makespan, status)} from the solver and
 to label the result in tables accordingly (we provide
 the helper \texttt{solve\_with\_status()} in the code
-release).
+release; see Appendix~\ref{app:code} for the full
+listing).
 
 \textbf{Implication.} Future empirical comparisons
 between RL and CP-SAT must report the solver status
@@ -2248,6 +2251,104 @@ python merge_sota.py
 python scripts/validate_schedule.py \
     data/instances/brandimarte/mk13.txt \
     data/results/sota_mk13_schedule.json
+\end{lstlisting}
+
+\section{Code Listings for Methodological Pitfalls}
+\label{app:code}
+
+The three code listings below correspond to the three
+methodological pitfalls discussed in
+\S\ref{sec:lessons-hgt}--\S\ref{sec:lessons-bc}. They
+are included verbatim from the code release at
+\url{https://github.com/BrunsonLiu/RL_FJSP} for
+verification.
+
+\subsection*{Listing 1: HGT Dropout Bug and Fix}
+The bug (top) and the one-line fix (bottom) in
+\texttt{select\_action}. The fix is
+\texttt{self.net.eval()} before deterministic
+inference.
+
+\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
+# --- buggy version: dropout active in greedy rollout ---
+def select_action(self, state):
+    # self.net is in train() mode (the bug)
+    logits = self.net(state.x, state.edge_index)
+    return logits.argmax()
+
+
+# --- fixed version: deterministic evaluation ---
+def select_action(self, state):
+    self.net.eval()                              # <-- the fix
+    with torch.no_grad():
+        logits = self.net(state.x, state.edge_index)
+    return logits.argmax()
+\end{lstlisting}
+
+\subsection*{Listing 2: Methodologically Correct CP-SAT Wrapper}
+The \texttt{solve\_with\_status()} helper returns a
+\texttt{(makespan, status)} tuple and labels the
+result in tables accordingly.
+
+\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
+# --- methodologically correct CP-SAT baseline ---
+def solve_with_status(model, time_limit_s: float = 300.0):
+    """Returns (makespan, status) where status is one of
+    'OPTIMAL', 'FEASIBLE', or 'INFEASIBLE'.
+    """
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = time_limit_s
+    status = solver.Solve(model)
+    if status == cp_model.OPTIMAL:
+        return solver.ObjectiveValue(), 'OPTIMAL'   # proven
+    elif status == cp_model.FEASIBLE:
+        return solver.ObjectiveValue(), 'FEASIBLE'  # upper bound
+    elif status == cp_model.INFEASIBLE:
+        return float('inf'), 'INFEASIBLE'
+    else:
+        raise RuntimeError(f'Unexpected CP-SAT status: {status}')
+\end{lstlisting}
+
+\subsection*{Listing 3: Schedule Validator}
+The \texttt{validate\_schedule} function checks that
+each $(job, op, machine, start, end)$ tuple satisfies
+the precedence, machine-eligibility, and no-overlap
+constraints, and that the makespan matches the one
+reported in Table~\ref{tab:sota-matrix}.
+
+\begin{lstlisting}[language=python, basicstyle=\ttfamily\footnotesize]
+def validate_schedule(instance_path, schedule_json):
+    """Returns True iff schedule is feasible and its
+    makespan matches the one in the schedule JSON.
+    """
+    inst = parse_brandimarte(instance_path)
+    schedule = json.load(open(schedule_json))
+    # 1. Precedence: each op scheduled after its predecessor
+    for j, ops in enumerate(inst.jobs):
+        for k, op in enumerate(ops[1:], start=1):
+            prev = schedule[(j, k-1)]
+            curr = schedule[(j, k)]
+            assert curr['start'] >= prev['end'], \
+                f'Precedence violation: ({j},{k-1}) -> ({j},{k})'
+    # 2. Machine eligibility: each op on a machine it can use
+    for (j, k, m, s, e) in schedule_tuples:
+        assert m in inst.jobs[j][k].eligible_machines, \
+            f'Machine {m} not eligible for ({j},{k})'
+    # 3. No-overlap on each machine
+    for m in inst.machines:
+        ops_on_m = sorted(
+            [s for s in schedule_tuples if s[2] == m],
+            key=lambda s: s[3]   # by start time
+        )
+        for i in range(1, len(ops_on_m)):
+            assert ops_on_m[i][3] >= ops_on_m[i-1][4], \
+                f'Overlap on machine {m}'
+    # 4. Makespan matches
+    actual = max(e for *_, e in schedule_tuples)
+    assert actual == schedule['reported_makespan'], \
+        f'Makespan mismatch: actual={actual}, reported=' \
+        f'{schedule["reported_makespan"]}'
+    return True
 \end{lstlisting}
 
 \end{document}
