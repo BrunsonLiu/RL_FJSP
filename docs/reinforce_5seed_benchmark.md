@@ -76,7 +76,7 @@
 python -m rl.train --instance data/instances/brandimarte/mk01.txt --episodes 100 --seed 0
 
 # 5 seeds, mk01-05
-python reinforce_5seed.py
+python experiments/rl_baselines/reinforce_5seed.py
 
 # OR-Tools CP-SAT (proven optimal where time suffices)
 python scripts/ortools_makespan.py data/instances/brandimarte/mk01.txt --time-limit-s 60

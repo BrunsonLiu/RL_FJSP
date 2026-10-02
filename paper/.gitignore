@@ -8,4 +8,5 @@
 *.bbl
 *.blg
 *.synctex.gz
+*.spl
 main.pdf

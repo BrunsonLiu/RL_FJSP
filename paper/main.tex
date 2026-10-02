@@ -2384,13 +2384,13 @@ The complete SOTA pipeline can be reproduced with the following
 commands:
 \begin{lstlisting}[language=bash, basicstyle=\ttfamily\footnotesize]
 # Train REINFORCE + first ILS+SA pass
-python sota_reinforce_ils.py
+python experiments/sota/sota_reinforce_ils.py
 
 # Aggressive ILS variants on hard instances
-python aggressive_ils_hard.py
+python experiments/sota/aggressive_ils_hard.py
 
 # Merge results into the final SOTA matrix
-python merge_sota.py
+python experiments/sota/merge_sota.py
 
 # Re-validate any saved schedule
 python scripts/validate_schedule.py \

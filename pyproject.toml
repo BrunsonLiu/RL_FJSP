@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-fjsp"
+version = "0.1.0"
+description = "Research toolkit for legal flexible job shop scheduling with reinforcement learning"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.2", "numpy>=1.26"]
+
+[project.optional-dependencies]
+analysis = ["matplotlib>=3.8"]
+solver = ["ortools>=9.8"]
+dev = ["build>=1.2"]
+
+[project.urls]
+Repository = "https://github.com/BrunsonLiu/RL_FJSP"
+Issues = "https://github.com/BrunsonLiu/RL_FJSP/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fjsp", "fjsp.*", "rl", "rl.*"]
+
+[tool.setuptools]
+include-package-data = false

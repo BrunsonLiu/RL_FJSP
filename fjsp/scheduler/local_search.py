@@ -315,69 +315,49 @@ def random_schedule(instance: FJSPInstance, seed: int = 0) -> list[ScheduledOper
 
 
 def neh_construct(instance: FJSPInstance) -> list[ScheduledOperation]:
-    """Nawaz-Enscore-Ham (NEH) constructive heuristic for FJSP, fast
-    precedence-respecting variant.
+    """Nawaz-Enscore-Ham (NEH) constructive heuristic for FJSP.
 
-    1. For each (job, op), compute the *minimum* processing time over
-       eligible machines.
-    2. Sort all (job, op) pairs by descending minimum processing time.
-    3. For each (job, op) in that order, choose the eligible machine that
-       minimises the makespan when this operation is appended to the
-       already-scheduled prefix. Precedence is preserved because we
-       process operations in their (job, op) natural order relative to the
-       sort: if (j, o+1) is processed before (j, o) it would have a
-       smaller total time, which we do not enforce here. To make NEH
-       precedence-respecting we sort by (job, op) within the same job and
-       only consider operations whose predecessor is already scheduled.
+    Proper NEH implementation:
+    1. For each job, compute total min processing time.
+    2. Sort jobs by descending total processing time.
+    3. For each job in that order, insert each of its operations (in
+       precedence order) at the best (machine, insertion position)
+       that minimises the partial makespan.
+
+    The previous implementation had two bugs:
+    - First pass was not NEH at all (just greedy machine assignment)
+    - Second pass "re-insertion" operated on assignments list positions,
+      which don't correspond to schedule positions in _recompute
     """
-    # Compute minimum processing time per (job, op)
-    op_min: list[tuple[int, int, float]] = []
+    # Step 1: Compute total min processing time per job
+    job_total: list[tuple[int, float]] = []
     for job_idx, job in enumerate(instance.jobs):
-        for op_idx, op in enumerate(job.operations):
-            min_t = min(opt.duration for opt in op.options)
-            op_min.append((job_idx, op_idx, min_t))
-    # Sort by descending minimum processing time
-    op_min.sort(key=lambda x: -x[2])
+        total = sum(min(opt.duration for opt in op.options) for op in job.operations)
+        job_total.append((job_idx, total))
+    # Sort jobs by descending total processing time (NEH ordering)
+    job_total.sort(key=lambda x: -x[1])
 
-    # Build a precedence-respecting order: only consider (j, o) where (j, o-1)
-    # is already scheduled.
-    scheduled: set[tuple[int, int]] = set()
     assignments: list[tuple[int, int, int]] = []
-    # First pass: process jobs in order
-    for job_idx, job in enumerate(instance.jobs):
+
+    # Step 2: For each job in NEH order, insert operations one by one
+    for job_idx, _ in job_total:
+        job = instance.jobs[job_idx]
         for op_idx, op in enumerate(job.operations):
-            best_machine = min(op.options, key=lambda o: o.duration).machine
             best_makespan = None
+            best_machine = None
+            # Try each eligible machine for this operation
             for option in op.options:
                 tentative = assignments + [(job_idx, op_idx, option.machine)]
-                ms = _makespan(instance, tentative)
-                if best_makespan is None or ms < best_makespan:
-                    best_makespan = ms
-                    best_machine = option.machine
-            assignments.append((job_idx, op_idx, best_machine))
-            scheduled.add((job_idx, op_idx))
-    # Second pass: NEH re-inserts operations in descending total time, choosing
-    # the (machine, position) that minimises the makespan.
-    op_min.sort(key=lambda x: -x[2])
-    for job_idx, op_idx, _ in op_min:
-        if (job_idx, op_idx) not in scheduled:
-            continue
-        # Find the current position of this operation in assignments
-        cur_idx = next(i for i, a in enumerate(assignments) if a[0] == job_idx and a[1] == op_idx)
-        # Try moving to any other position and any eligible machine
-        operation = instance.jobs[job_idx].operations[op_idx]
-        best_choice: tuple[int, list[tuple[int, int, int]]] | None = None
-        for new_pos in range(len(assignments) + 1):
-            if new_pos == cur_idx:
-                continue
-            for option in operation.options:
-                tentative = [a for a in assignments if a[0] != job_idx or a[1] != op_idx]
-                tentative.insert(new_pos, (job_idx, op_idx, option.machine))
-                ms = _makespan(instance, tentative)
-                if best_choice is None or ms < best_choice[0]:
-                    best_choice = (ms, tentative)
-        if best_choice is not None:
-            assignments = best_choice[1]
+                try:
+                    ms = _makespan(instance, tentative)
+                    if best_makespan is None or ms < best_makespan:
+                        best_makespan = ms
+                        best_machine = option.machine
+                except ValueError:
+                    continue
+            if best_machine is not None:
+                assignments.append((job_idx, op_idx, best_machine))
+
     return _recompute(instance, assignments)
 
 

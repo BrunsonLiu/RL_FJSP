@@ -56,9 +56,9 @@
 
 - `rl/agents/reinforce_agent.py` — REINFORCE 智能体 (8-feature MLP)
 - `scripts/ortools_makespan.py` — OR-Tools CP-SAT 求解器（带 OPT/FEAS 区分）
-- `reinforce_5seed.py` — mk01-05 5-seed 脚本
-- `reinforce_5seed_large.py` — mk06/10/13/15 5-seed 脚本
-- `reinforce_5seed_opt.py` — mk11/12/14 5-seed 脚本
+- `experiments/rl_baselines/reinforce_5seed.py` — mk01-05 5-seed 脚本
+- `experiments/rl_baselines/reinforce_5seed_large.py` — mk06/10/13/15 5-seed 脚本
+- `experiments/rl_baselines/reinforce_5seed_opt.py` — mk11/12/14 5-seed 脚本
 - `data/results/reinforce_mk01_mk05_5seed.json` — mk01-05 详细结果
 - `data/results/reinforce_mk06_mk10_mk13_mk15_5seed.json` — 大实例 5-seed 结果
 - `data/results/reinforce_mk11_mk12_mk14_5seed.json` — 最难实例 5-seed 结果

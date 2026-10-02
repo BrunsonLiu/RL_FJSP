@@ -95,13 +95,13 @@ The fix for paper-grade reporting is to:
 
 ```powershell
 # 5-seed REINFORCE on small instances
-python reinforce_5seed.py
+python experiments/rl_baselines/reinforce_5seed.py
 
 # 5-seed REINFORCE on mid instances
-python reinforce_5seed_large.py
+python experiments/rl_baselines/reinforce_5seed_large.py
 
 # 5-seed REINFORCE on hard instances
-python reinforce_5seed_opt.py
+python experiments/rl_baselines/reinforce_5seed_opt.py
 
 # OR-Tools CP-SAT
 python scripts/ortools_makespan.py data/instances/brandimarte/mk12.txt --time-limit-s 30

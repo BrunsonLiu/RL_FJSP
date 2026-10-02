@@ -895,7 +895,7 @@ two steps. First, train REINFORCE (5 seeds × 100 episodes) and run a
 first-improvement ILS+SA pass on every Brandimarte instance:
 
 ```powershell
-python sota_reinforce_ils.py
+python experiments/sota/sota_reinforce_ils.py
 ```
 
 This writes `data/results/sota_reinforce_ils.json` (all 15 instances).
@@ -905,7 +905,7 @@ an aggressive ILS variant that uses best-improvement local search,
 cross-machine swap moves, and several perturbation strengths:
 
 ```powershell
-python aggressive_ils_hard.py
+python experiments/sota/aggressive_ils_hard.py
 ```
 
 This writes `data/results/aggressive_ils_hard.json`. Finally, merge
@@ -913,7 +913,7 @@ the two result files into `data/results/sota_final.json` and print
 the summary table:
 
 ```powershell
-python merge_sota.py
+python experiments/sota/merge_sota.py
 ```
 
 For the three largest instances (MK09, MK10, MK15) we additionally
@@ -922,8 +922,8 @@ makespan units on MK10 and MK15 (Section 4.8). The TS results
 land in `data/results/tabu_results.json`; the merge step is:
 
 ```powershell
-python tabu_hard_v2.py        # writes data/results/tabu_results.json
-python merge_ts_sota.py       # folds TS into data/results/sota_final.json
+python experiments/sota/tabu_hard_v2.py        # writes data/results/tabu_results.json
+python experiments/sota/merge_ts_sota.py       # folds TS into data/results/sota_final.json
 ```
 
 All schedules that contribute to the FINAL column of Table 4 are
