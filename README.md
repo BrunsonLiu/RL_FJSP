@@ -146,6 +146,8 @@ See [current status](docs/current_status.md) and
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for validation and experiment conventions,
 and [GitHub publication](docs/github_release.md) for release preparation.
+The [project roadmap](docs/ROADMAP.md) tracks the next engineering and research
+tasks, their acceptance criteria, and the proposed eight-week validation plan.
 Keep generated checkpoints, credentials, and transient logs outside commits.
 
 No code license has been selected yet. Public visibility alone does not grant
