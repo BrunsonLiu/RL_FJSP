@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.10"
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: windows-latest
+            python: "3.12"
+    env:
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install CPU dependencies and project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "torch>=2.2" --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -e ".[dev]"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Scheduler smoke test
+        run: python scripts/run_smoke_test.py
+      - name: Environment smoke test
+        run: python scripts/run_env_smoke_test.py
+      - name: Independent schedule validation
+        run: python scripts/validate_schedule.py data/instances/brandimarte/mk01.txt data/results/env_smoke_schedule.json
+      - name: Validate curated schedules
+        run: python scripts/check_curated_schedules.py
+      - name: Build distributions
+        run: python -m build
+      - name: Install and import wheel outside checkout
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tempfile
+
+          wheel = next(Path("dist").glob("*.whl")).resolve()
+          subprocess.run([sys.executable, "-m", "pip", "install", "--force-reinstall", "--no-deps", str(wheel)], check=True)
+          with tempfile.TemporaryDirectory() as directory:
+              env = os.environ.copy()
+              env.pop("PYTHONPATH", None)
+              subprocess.run([sys.executable, "-c", "import fjsp.parser; import fjsp.env; import rl.agents"], cwd=directory, env=env, check=True)

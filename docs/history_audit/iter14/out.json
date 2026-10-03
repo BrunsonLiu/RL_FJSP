@@ -1,0 +1,22 @@
+{
+  "id": "C14",
+  "claim": "The improvement-potential estimate is an upper bound on achievable reduction",
+  "verdict": "refuted",
+  "evidence": {
+    "initial_valid": true,
+    "initial_makespan": 10,
+    "returned_assignments": [
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "unchanged": true,
+    "potential_estimate": 0.0,
+    "alternative_valid": true,
+    "alternative_makespan": 1,
+    "achievable_reduction": 9
+  },
+  "resolution": "A legal alternative gains 9 while the estimate is 0; use heuristic-score wording until a valid bound is derived."
+}

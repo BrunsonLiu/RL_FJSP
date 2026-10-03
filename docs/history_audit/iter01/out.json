@@ -1,0 +1,12 @@
+{
+  "id": "C01",
+  "claim": "5.64% is the quality of the PA-REINFORCE policy itself",
+  "verdict": "fragile",
+  "evidence": {
+    "historical_pipeline_gap_percent": 5.636768701057733,
+    "median": 2.8776978417266186,
+    "without_mk13": 6.271953176382455,
+    "policy_only_gap_percent": 10.554172077051925
+  },
+  "resolution": "Attribute the arithmetic to the historical composite pipeline and internal reference table, not the standalone policy or a current literature record."
+}

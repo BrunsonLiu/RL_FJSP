@@ -1,0 +1,4 @@
+group,n,mean_gap_pct,min_gap_pct,max_gap_pct
+small,6,8.99,0.0,21.67
+medium,4,6.18,0.0,13.71
+large,5,1.18,-3.26,8.5

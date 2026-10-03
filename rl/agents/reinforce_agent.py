@@ -17,12 +17,13 @@ from rl.models.action_scorer import ActionScorer
 FEATURE_DIM = 8
 
 
-@dataclass(frozen=True)
+@dataclass
 class EpisodeResult:
     makespan: int
     total_reward: float
     is_valid: bool
     log_prob_sum: torch.Tensor | None = None
+    entropy_sum: torch.Tensor | float = 0.0
 
 
 def action_features(env: FJSPDispatchEnv, action: DispatchAction, *, scale: int | None = None) -> list[float]:
@@ -90,13 +91,23 @@ class ReinforceDispatchAgent:
         rng = Random(seed) if seed is not None else None
         log_probs: list[torch.Tensor] = []
         total_reward = 0.0
+        entropy_sum: torch.Tensor | float = 0.0
 
         while not env.done:
             action, log_prob = self.select_action(env, greedy=greedy, rng=rng)
-            _, reward, _, _ = env.step(action)
-            total_reward += reward
             if log_prob is not None:
                 log_probs.append(log_prob)
+                # Use the decision state and retain gradients for the entropy bonus.
+                actions = env.available_actions()
+                scale = instance_time_scale(env)
+                features = torch.tensor(
+                    [action_features(env, a, scale=scale) for a in actions],
+                    dtype=torch.float32, device=self.device,
+                )
+                logits = self.model(features)
+                entropy_sum = entropy_sum + Categorical(logits=logits).entropy()
+            _, reward, _, _ = env.step(action)
+            total_reward += reward
 
         validation = env.validate()
         log_prob_sum = torch.stack(log_probs).sum() if log_probs else None
@@ -105,6 +116,7 @@ class ReinforceDispatchAgent:
             total_reward=total_reward,
             is_valid=validation.is_valid,
             log_prob_sum=log_prob_sum,
+            entropy_sum=entropy_sum,
         )
 
     def state_dict(self) -> dict[str, object]:
@@ -135,6 +147,7 @@ def train_reinforce(
     hidden_dim: int = 64,
     seed: int = 0,
     device: str = "cpu",
+    entropy_coef: float = 0.01,
 ) -> tuple[ReinforceDispatchAgent, list[dict[str, float]]]:
     torch.manual_seed(seed)
     rng = Random(seed)
@@ -154,7 +167,8 @@ def train_reinforce(
         reward = -float(result.makespan)
         baseline = reward if baseline is None else 0.9 * baseline + 0.1 * reward
         advantage = reward - baseline
-        loss = -result.log_prob_sum * advantage
+        # Entropy bonus for exploration (prevents premature convergence)
+        loss = -result.log_prob_sum * advantage - entropy_coef * result.entropy_sum
 
         optimizer.zero_grad()
         loss.backward()

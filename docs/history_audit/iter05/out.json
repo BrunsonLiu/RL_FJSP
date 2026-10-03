@@ -1,0 +1,15 @@
+{
+  "id": "C05",
+  "claim": "The archived evidence supports 5 seeds on all 15 instances and 375 comparable runs",
+  "verdict": "fragile",
+  "evidence": {
+    "explicit_seed_rows": 12,
+    "explicit_seed_runs": 60,
+    "missing_instances": [
+      "mk07",
+      "mk08",
+      "mk09"
+    ]
+  },
+  "resolution": "These explicit seed files cover 12 instances/60 runs; remaining runs need a unified manifest before asserting complete comparable coverage."
+}

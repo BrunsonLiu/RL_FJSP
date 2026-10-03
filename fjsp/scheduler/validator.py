@@ -149,6 +149,26 @@ def greedy_schedule(instance: FJSPInstance) -> list[ScheduledOperation]:
     return schedule
 
 
+def earliest_finish_schedule(instance: FJSPInstance) -> list[ScheduledOperation]:
+    """Generate a schedule using the earliest-finish dispatch rule.
+
+    This interleaves operations across jobs (unlike ``greedy_schedule`` which
+    schedules job-by-job), producing significantly better initial solutions.
+    """
+    from fjsp.env.dispatch_env import FJSPDispatchEnv
+    from fjsp.scheduler.dispatch_rules import choose_earliest_finish
+
+    env = FJSPDispatchEnv(instance)
+    env.reset()
+    while not env.done:
+        action = choose_earliest_finish(env)
+        env.step(action)
+    result = env.validate()
+    if not result.is_valid:
+        raise RuntimeError(f"Earliest-finish schedule is invalid: {result.errors}")
+    return env.schedule
+
+
 def schedule_to_dict(schedule: list[ScheduledOperation]) -> dict[str, list[dict[str, int]]]:
     return {
         "operations": [

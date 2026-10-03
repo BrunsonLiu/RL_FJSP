@@ -1,0 +1,48 @@
+{
+  "id": "C06",
+  "claim": "SA is generally a negative-contribution method",
+  "verdict": "fragile",
+  "evidence": {
+    "regressions": [
+      "mk04",
+      "mk05",
+      "mk06",
+      "mk07",
+      "mk09",
+      "mk10",
+      "mk11",
+      "mk12",
+      "mk15"
+    ],
+    "improvements": [],
+    "stage_means": {
+      "ef_makespan": 394.06666666666666,
+      "reinforce_best": 307.93333333333334,
+      "ils_best": 295.8,
+      "sa_makespan": 301.8666666666667,
+      "final_best": 294.6666666666667,
+      "lit_target": 287.6
+    },
+    "current_probe": [
+      {
+        "seed": 0,
+        "initial": 8,
+        "returned": 6,
+        "legal": true
+      },
+      {
+        "seed": 1,
+        "initial": 8,
+        "returned": 6,
+        "legal": true
+      },
+      {
+        "seed": 2,
+        "initial": 8,
+        "returned": 6,
+        "legal": true
+      }
+    ]
+  },
+  "resolution": "Observed historical endpoint regressions are descriptive, not a universal statement about SA; distinguish last endpoint from best-so-far and heterogeneous configurations."
+}

@@ -1,0 +1,101 @@
+path,route_hint,source_summary,entry_points,artifact_references,in_published_snapshot
+rl/evaluate.py,other_tool_or_probe,,main,reinforce_mk01.pt; reinforce_mk01_schedule.json,True
+rl/evaluate_actor_critic.py,flat_dispatch,,main,actor_critic_mk01.pt; actor_critic_mk01_schedule.json,True
+rl/evaluate_fjsp_l2s.py,bari_improvement,Evaluate FJSP-L2S agent on Brandimarte instances.,main,_l2s_schedule.json; evaluation_results.json,True
+rl/evaluate_graph_actor_critic.py,graph_dispatch,,main,graph_actor_critic_mk01.pt; graph_actor_critic_mk01_schedule.json,True
+rl/evaluate_graph_ppo.py,graph_dispatch,,main,graph_ppo_mk01.pt; graph_ppo_mk01_schedule.json,True
+rl/train.py,other_tool_or_probe,,main,reinforce_mk01.pt; reinforce_mk01_best_schedule.json; reinforce_mk01_history.json,True
+rl/train_actor_critic.py,flat_dispatch,,main,actor_critic_mk01.pt; actor_critic_mk01_best_schedule.json; actor_critic_mk01_history.json,True
+rl/train_fjsp_l2s.py,bari_improvement,Train FJSP-L2S: Learning to Improve for FJSP.,main,data/results; fjsp_l2s_history.json,True
+rl/train_graph_actor_critic.py,graph_dispatch,,main,graph_actor_critic_mk01.pt; graph_actor_critic_mk01_best_schedule.json; graph_actor_critic_mk01_history.json,True
+rl/train_graph_ppo.py,graph_dispatch,,main,graph_ppo_mk01.pt; graph_ppo_mk01_best_schedule.json; graph_ppo_mk01_history.json,True
+rl/train_hgt.py,hgt_dispatch,Training entry point for the HGT-FJSP agent (single instance or cross-instance).,_instance_id_for_path; train_hgt_actor_critic; main,hgt_mk01_best.pt; hgt_mk01_best_schedule.json; hgt_mk01_history.json,True
+rl/train_hgt_a2c.py,hgt_dispatch,HGT-A2C: A2C-style synchronous actor-critic for the HGT-FJSP agent.,train_hgt_a2c; main,hgt_a2c_mk01.pt; hgt_a2c_mk01_best_schedule.json; hgt_a2c_mk01_history.json,True
+rl/train_hgt_imitation.py,hgt_dispatch,Behavioral cloning pretraining for the HGT-FJSP agent.,_snapshot_env; _restore_env; _resolve_positions; collect_cross_instance_demonstrations; train_hgt_imitation; main,.history.json; hgt_bc_mk01_10.pt,True
+rl/train_hgt_ppo.py,hgt_dispatch,HGT-PPO: Proximal Policy Optimization with GAE on the HGT-FJSP agent.,_snapshot_env; _restore_env; _collect_rollout; _compute_gae; _ppo_update; train_hgt_ppo; main,hgt_ppo_mk01_best.pt; hgt_ppo_mk01_best_schedule.json; hgt_ppo_mk01_history.json,True
+rl/train_imitation.py,dispatch_imitation,CLI: train a graph two-stage actor-critic policy with behavioral cloning,main,imitation_mk01_best.pt; imitation_mk01_best_schedule.json; imitation_mk01_history.json,True
+rl/train_imitation_ppo.py,dispatch_imitation,CLI: load a BC-pretrained graph PPO model and fine-tune it with PPO on FJSP.,main,bc_ppo_mk01_best.pt; bc_ppo_mk01_best_schedule.json; bc_ppo_mk01_history.json; imitation_mk01_best.pt,True
+experiments/analysis/analysis.py,reporting,"Comprehensive analysis: per-stage ablation, classical rules baseline,",ablation_table; classical_rules; wallclock; per_difficulty; failure_mode; build_summary; main,"
+Done. All CSVs and summary.md in data/results/analysis/.; data/instances/instances.json; data/results/aggressive_ils_hard.json; data/results/analysis; data/results/sota_final.json; data/results/sota_reinforce_ils.json",True
+experiments/analysis/capture_learning_curve.py,reporting,Capture per-episode training history for the per-action REINFORCE,main,rl_history_mk01.json,True
+experiments/analysis/check_gaps.py,reporting,,,data/results/sota_final.json,True
+experiments/analysis/l2i_comparison.py,reporting,Build a per-instance comparison table:,,data/results/analysis/l2i_comparison.csv; data/results/analysis/l2i_comparison.md; data/results/l2i_baseline.json; data/results/sota_final.json,True
+experiments/analysis/make_figures.py,reporting,Generate figures for the paper.,load_sota; make_sota_bar; make_learning_curve; make_ablation,rl_history_mk01.json; sota_final.json,True
+experiments/bc_ac_quick.py,dispatch_imitation,Quick experiment: BC + AC fine-tuning on mk01 with low lr.,,data/results/bc_ac_mk01_best.pt; data/results/imitation_mk01_best.pt,True
+experiments/rl_baselines/a2c_ls_hard.py,flat_dispatch,"A2C + LS on hard Brandimarte instances, 5 seeds.",collect_schedule; collect_schedule_a2c,"A2C + LS on hard Brandimarte instances, 5 seeds.
+
+Compares REINFORCE+LS vs A2C+LS to see if A2C value baseline helps.
+Saves to data/results/a2c_ls_hard.json
+; a2c_ls_hard.json; instances.json",True
+experiments/rl_baselines/bc_ac_repro.py,dispatch_imitation,Replicate BC + AC pipeline: BC 100 rollouts -> AC 500 episodes. Saves model + history.,,bc14_ac14_mk01_ac.pt; bc14_ac14_mk01_bc.pt; bc14_ac14_mk01_history.json; bc14_ac14_mk01_schedule.json,True
+experiments/rl_baselines/check_bc_data.py,expert_data,,,data/results/bc_data/bc_transitions.pkl,True
+experiments/rl_baselines/collect_bc_trajectories.py,expert_data,Collect behavioral-cloning trajectories using a greedy one-step expert.,greedy_rollout; generate_diverse_initial; main,data/results/bc_trajectories; greedy_trajectories.pkl,True
+experiments/rl_baselines/collect_move_rank_data.py,neural_search,Collect training data for MoveRankNet from standard ILS runs.,evaluate_move; collect_from_ils; main,data/results/move_rank_data; move_rank_data.pkl,True
+experiments/rl_baselines/collect_neighborhood_data.py,neural_search,Collect move-outcome pairs from greedy local search using full neighborhoods.,_neighbor_to_move; _sample_neighbors; collect_from_instance; main,data/results/move_rank_data/neighborhood_move_data.pkl,True
+experiments/rl_baselines/generate_bc_data.py,expert_data,Generate behavioral cloning data using a greedy expert.,randomized_first_improvement_rollout; generate_bc_dataset,bc_metadata.json; bc_transitions.pkl; data/results/bc_data,True
+experiments/rl_baselines/l2i_baseline.py,operator_selection,L2I-style baseline: RL agent learns to SELECT which neighborhood,L2IPolicy; encode_state; _recompute_safe; apply_operator; train_l2i; run_one; main,data/results/l2i_baseline.json,True
+experiments/rl_baselines/neural_guided_ils.py,neural_search,Neural-guided Iterated Local Search for FJSP.,_graph_to_device; _load_move_rank_net; _schedule_to_json; neural_guided_ils; main,data/results/move_rank_data/move_rank_net.pt,True
+experiments/rl_baselines/neural_guided_ils_v2.py,neural_search,Neural-guided ILS using the full local_search.py neighborhoods.,_schedule_to_json; main,data/results/move_rank_data/move_rank_net.pt,True
+experiments/rl_baselines/reinforce_5seed.py,flat_dispatch,5-seed REINFORCE benchmark on Brandimarte mk01-05.,,"5-seed REINFORCE benchmark on Brandimarte mk01-05.
+
+Saves to data/results/reinforce_mk01_mk05_5seed.json
+; reinforce_mk01_mk05_5seed.json",True
+experiments/rl_baselines/reinforce_5seed_large.py,flat_dispatch,"5-seed REINFORCE benchmark on Brandimarte mk06, mk10, mk13, mk15.",,"5-seed REINFORCE benchmark on Brandimarte mk06, mk10, mk13, mk15.
+
+Saves to data/results/reinforce_mk06_mk10_mk13_mk15_5seed.json
+; reinforce_mk06_mk10_mk13_mk15_5seed.json",True
+experiments/rl_baselines/reinforce_5seed_opt.py,flat_dispatch,"5-seed REINFORCE benchmark on Brandimarte mk11, mk12, mk14.",,"5-seed REINFORCE benchmark on Brandimarte mk11, mk12, mk14.
+
+Saves to data/results/reinforce_mk11_mk12_mk14_5seed.json
+; reinforce_mk11_mk12_mk14_5seed.json",True
+experiments/rl_baselines/reinforce_ls_5seed.py,flat_dispatch,REINFORCE 5-seed best + multi-start local search on Brandimarte mk01-15.,collect_schedule,instances.json; reinforce_ls_mk01_mk15.json,True
+experiments/rl_baselines/reinforce_ls_long_hard.py,flat_dispatch,Longer REINFORCE training (500 ep) + LS on hard instances.,collect_schedule,"Longer REINFORCE training (500 ep) + LS on hard instances.
+
+Saves to data/results/reinforce_ls_long_hard.json
+; instances.json; reinforce_ls_long_hard.json",True
+experiments/rl_baselines/reinforce_ls_sa_hard.py,flat_dispatch,REINFORCE 5-seed + (LS + SA) on hard Brandimarte instances.,collect_schedule,instances.json; reinforce_ls_sa_hard.json,True
+experiments/rl_baselines/run_ablation.py,other_tool_or_probe,Ablation experiments for BARI.,run_ablation,"
+Saved to data/results/ablation_summary.json; ablation_results.json; data/results/ablation_; data/results/ablation_summary.json",True
+experiments/rl_baselines/run_bari_comparison.py,bari_improvement,BARI comparison experiments: BARI vs EF baseline vs ILS vs SA.,run_ef_baseline; run_ils; run_sa; run_bari; torch_load; main,comparison_results.json; data/results/bari_comparison; data/results/bari_cross/fjsp_l2s_best.pt,True
+experiments/rl_baselines/run_bari_dual_comparison.py,bari_improvement,Run BARI comparison with dual-perspective model on all 15 Brandimarte instances.,main,comparison_results.json; data/results/bari_dual_comparison; data/results/bari_dual_mk01/fjsp_l2s_best.pt,True
+experiments/rl_baselines/run_bari_mk01_500.py,bari_improvement,Run BARI training on MK01 for 500 episodes.,,data/results/bari_mk01_500,True
+experiments/rl_baselines/run_neural_ils_benchmark.py,neural_search,Benchmark Neural-guided ILS against greedy BARI and standard ILS.,_graph_to_device; _load_net; greedy_bari; neural_guided_ils; run_instance; main,data/results/move_rank_data/move_rank_net.pt; data/results/neural_ils_benchmark.json; data/results/sota_final.json,True
+experiments/rl_baselines/run_neural_ils_v2_benchmark.py,neural_search,Benchmark Neural-guided ILS v2 against SOTA reference on Brandimarte.,main,data/results/move_rank_data/move_rank_net.pt; data/results/neural_ils_v2_benchmark.json; data/results/sota_final.json,True
+experiments/rl_baselines/train_bari_bc.py,bari_improvement,Pre-train BARI with behavioral cloning from greedy expert trajectories.,main,bc_pretrained.pt; data/results/bari_bc; data/results/bc_trajectories/greedy_trajectories.pkl,True
+experiments/rl_baselines/train_bari_bc_ppo.py,bari_improvement,Train BARI with BC pretraining + PPO finetuning.,,data/results/bari_bc_ppo; data/results/bc_data/bc_pretrained.pt,True
+experiments/rl_baselines/train_bari_bc_v2.py,bari_improvement,Pre-train BARI with behavioral cloning (works with partial data).,main,bc_pretrained.pt; data/results/bari_bc; data/results/bc_trajectories/greedy_trajectories.pkl,True
+experiments/rl_baselines/train_bari_cross.py,bari_improvement,"Cross-instance training: train on MK01+MK02, evaluate on MK01-15.",,cross_instance_results.json; data/results/bari_cross,True
+experiments/rl_baselines/train_bari_dual_mk01.py,bari_improvement,Train BARI with dual-perspective encoder on MK01 (quick validation).,,data/results/bari_dual_mk01,True
+experiments/rl_baselines/train_bari_tuned.py,bari_improvement,Train BARI with tuned hyperparameters for stable convergence.,,data/results/bari_tuned,True
+experiments/rl_baselines/train_bc.py,expert_data,Behavioral cloning pretraining for BARI.,train_bc,data/results/bc_data/bc_pretrained.pt; data/results/bc_data/bc_transitions.pkl,True
+experiments/rl_baselines/train_bc_simple.py,expert_data,Fast BC training for SimpleMoveNet baseline.,train_bc_simple; graph_to_device,data/results/bc_data/bc_transitions.pkl; data/results/bc_data/simple_bc_pretrained.pt,True
+experiments/rl_baselines/train_move_rank.py,neural_search,Train MoveRankNet for neural-guided local search.,graph_to_device; _ranking_metrics; train_move_rank,data/results/move_rank_data/move_rank_net.pt; data/results/move_rank_data/neighborhood_move_data.pkl,True
+experiments/sota/aggressive_ils_hard.py,classical_pipeline,Aggressive SOTA on hard Brandimarte instances using best-improvement,collect_schedule; aggressive_ils_for_instance; main,aggressive_ils_hard.json; instances.json,True
+experiments/sota/dump_sota_part2.py,classical_pipeline,"Dump mk13 and mk14 schedules (no TS, use ILS+SA).",collect_schedule; schedule_to_json; run_one; main,_schedule.json; sota_schedule_validation_part2.json,True
+experiments/sota/dump_sota_schedules.py,classical_pipeline,Dump the SOTA schedule for the 5 most-cited Brandimarte instances.,collect_schedule; schedule_to_json; save_and_validate; run_one; main,_schedule.json; sota_schedule_validation.json,True
+experiments/sota/merge_sota.py,classical_pipeline,Combine SOTA results from both runs into a unified table.,,aggressive_ils_hard.json; reinforce_mk01_mk05_5seed.json; reinforce_mk06_mk10_mk13_mk15_5seed.json; reinforce_mk11_mk12_mk14_5seed.json; sota_final.json; sota_reinforce_ils.json,True
+experiments/sota/merge_ts_sota.py,classical_pipeline,Merge tabu search improvements into sota_final.json.,,sota_final.json; tabu_results.json,True
+experiments/sota/redump_mk12.py,classical_pipeline,"Re-dump the mk12 schedule at makespan 508 (ILS best, not SA=524).",collect_schedule; schedule_to_json,data/results/sota_mk12_schedule.json,True
+experiments/sota/sota_reinforce_ils.py,classical_pipeline,SOTA: REINFORCE + ILS+SA on Brandimarte MK01-MK15.,collect_schedule; _log; run_sota_on_instance; main,instances.json; sota_reinforce_ils.json,True
+experiments/sota/sota_remaining.py,classical_pipeline,"Run the remaining SOTA instances (mk13, mk14, mk15) and merge with the",main,sota_reinforce_ils.json,True
+experiments/sota/tabu_hard.py,classical_pipeline,Tabu search post-processor for the worst-gap Brandimarte instances.,collect_schedule; collect_ef_schedule; run_tabu_for_instance; main,instances.json; tabu_hard.json,True
+experiments/sota/tabu_hard_v2.py,classical_pipeline,Tabu search from the SOTA ILS-best schedule for hard instances.,collect_schedule; train_and_collect_best; main,.json; instances.json; tabu_results.json,True
+scripts/dev/debug_graph.py,graph_dispatch,,,data/results/bc_data/bc_transitions.pkl,True
+scripts/dev/debug_lb.py,other_tool_or_probe,Debug lower bound calculation.,main,,True
+scripts/dev/debug_ls.py,other_tool_or_probe,Debug test for local search.,,,True
+scripts/dev/debug_move_rank.py,neural_search,,,data/results/move_rank_data/move_rank_data.pkl,True
+scripts/dev/debug_simple_net.py,other_tool_or_probe,,,data/results/bc_data/bc_transitions.pkl,True
+scripts/dev/quick_perf_test.py,other_tool_or_probe,Quick performance test for BARI environment.,,,True
+scripts/dev/test_a2c.py,flat_dispatch,Test PA-A2C on mk01 to verify the agent works.,,,True
+scripts/dev/test_bari_dual.py,bari_improvement,Quick end-to-end test for BARI with dual-perspective encoder.,main,,True
+scripts/dev/test_best_ls.py,other_tool_or_probe,Quick test: best-improvement LS with cross-machine swap on mk01.,,,True
+scripts/dev/test_fjsp_l2s.py,bari_improvement,Smoke test for the FJSP-L2S improvement environment and neural network.,test_improvement_env; test_neural_network; test_training_one_step,,True
+scripts/dev/test_ils_smoke.py,other_tool_or_probe,Quick smoke test of ILS/SA on mk01.,,,True
+scripts/dev/test_local_search.py,other_tool_or_probe,Quick smoke test: EF heuristic + local search on a few Brandimarte instances.,,instances.json,True
+scripts/dev/test_neh_ls.py,other_tool_or_probe,Test NEH heuristic + LS on Brandimarte instances.,,instances.json,True
+scripts/dev/test_reward_shaping.py,other_tool_or_probe,Test reward shaping in improvement env.,main,,True
+scripts/dev/test_sota_mk01.py,other_tool_or_probe,SOTA quick: just on mk01 and mk02 to verify timing.,,,True
+scripts/dev/test_sota_quick.py,other_tool_or_probe,Quick timing test: SOTA approach on mk01 and mk04.,,,True
+scripts/dev/test_tabu_mk10.py,other_tool_or_probe,Single-instance test: TS on mk10 from current best (RL+ILS).,collect_ef_schedule; collect_schedule; main,,True
+scripts/dev/test_tabu_smoke.py,other_tool_or_probe,Quick smoke test for tabu_search on mk01.,collect_ef_schedule; main,,True
+scripts/dev/test_true_coupled.py,other_tool_or_probe,Test true coupled_reassign: random rollout with full insertion optimization.,random_improve,,True

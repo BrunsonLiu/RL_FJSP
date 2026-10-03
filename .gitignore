@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -5,9 +6,47 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
-data/results/*.json
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Local credentials and editor state
+.env
+.env.*
+!.env.example
+.claude/
+.vscode/
+.idea/
+*.pem
+*.key
+
+# Experiment outputs: generated results are ignored wholesale; only the
+# curated artifacts below are version-controlled.
+data/results/*
+!data/results/.gitkeep
+!data/results/analysis/
+!data/results/aggressive_ils_hard.json
+!data/results/baseline_brandimarte_matrix.csv
+!data/results/baseline_brandimarte_matrix.md
+!data/results/bc_ac_mk01_results.md
+!data/results/benchmark_*.csv
+!data/results/comparison_three_agents_mk01_100ep.md
+!data/results/hgt_*.log
+!data/results/l2i_baseline.json
+!data/results/reinforce_*_5seed.json
+!data/results/sota_final.json
+!data/results/sota_mk*_schedule.json
+!data/results/sota_reinforce_ils.json
+!data/results/sota_reinforce_ils.log
+!data/results/sota_schedule_validation*.json
+!data/results/tabu_results.json
+
+# Trained model weights (never commit)
 data/results/*.pt
 data/results/*.pth
+
+# Training logs
 experiments/logs/*
 !experiments/logs/.gitkeep
-!data/results/.gitkeep

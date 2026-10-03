@@ -1,0 +1,187 @@
+[
+  {
+    "instance": "mk01",
+    "jobs": 10,
+    "machines": 6,
+    "operations": 55,
+    "earliest_finish": 57,
+    "reinforce_best": 43,
+    "reinforce_mean": 43,
+    "reinforce_std": 0.0,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 43,
+        "seconds": 10.76
+      },
+      {
+        "seed": 1,
+        "best": 43,
+        "seconds": 9.4
+      },
+      {
+        "seed": 2,
+        "best": 43,
+        "seconds": 9.38
+      },
+      {
+        "seed": 3,
+        "best": 43,
+        "seconds": 9.38
+      },
+      {
+        "seed": 4,
+        "best": 43,
+        "seconds": 9.27
+      }
+    ]
+  },
+  {
+    "instance": "mk02",
+    "jobs": 10,
+    "machines": 6,
+    "operations": 58,
+    "earliest_finish": 62,
+    "reinforce_best": 28,
+    "reinforce_mean": 31.8,
+    "reinforce_std": 2.48,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 28,
+        "seconds": 12.36
+      },
+      {
+        "seed": 1,
+        "best": 35,
+        "seconds": 12.24
+      },
+      {
+        "seed": 2,
+        "best": 33,
+        "seconds": 13.33
+      },
+      {
+        "seed": 3,
+        "best": 33,
+        "seconds": 11.46
+      },
+      {
+        "seed": 4,
+        "best": 30,
+        "seconds": 12.62
+      }
+    ]
+  },
+  {
+    "instance": "mk03",
+    "jobs": 15,
+    "machines": 8,
+    "operations": 150,
+    "earliest_finish": 331,
+    "reinforce_best": 216,
+    "reinforce_mean": 217.4,
+    "reinforce_std": 2.8,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 223,
+        "seconds": 43.18
+      },
+      {
+        "seed": 1,
+        "best": 216,
+        "seconds": 33.96
+      },
+      {
+        "seed": 2,
+        "best": 216,
+        "seconds": 44.96
+      },
+      {
+        "seed": 3,
+        "best": 216,
+        "seconds": 34.98
+      },
+      {
+        "seed": 4,
+        "best": 216,
+        "seconds": 42.14
+      }
+    ]
+  },
+  {
+    "instance": "mk04",
+    "jobs": 15,
+    "machines": 8,
+    "operations": 90,
+    "earliest_finish": 91,
+    "reinforce_best": 79,
+    "reinforce_mean": 80.6,
+    "reinforce_std": 0.8,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 81,
+        "seconds": 16.91
+      },
+      {
+        "seed": 1,
+        "best": 81,
+        "seconds": 15.66
+      },
+      {
+        "seed": 2,
+        "best": 81,
+        "seconds": 16.24
+      },
+      {
+        "seed": 3,
+        "best": 79,
+        "seconds": 15.79
+      },
+      {
+        "seed": 4,
+        "best": 81,
+        "seconds": 15.43
+      }
+    ]
+  },
+  {
+    "instance": "mk05",
+    "jobs": 15,
+    "machines": 4,
+    "operations": 106,
+    "earliest_finish": 220,
+    "reinforce_best": 180,
+    "reinforce_mean": 182.4,
+    "reinforce_std": 1.74,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 183,
+        "seconds": 15.41
+      },
+      {
+        "seed": 1,
+        "best": 183,
+        "seconds": 8.42
+      },
+      {
+        "seed": 2,
+        "best": 185,
+        "seconds": 8.66
+      },
+      {
+        "seed": 3,
+        "best": 180,
+        "seconds": 8.82
+      },
+      {
+        "seed": 4,
+        "best": 181,
+        "seconds": 8.85
+      }
+    ]
+  }
+]

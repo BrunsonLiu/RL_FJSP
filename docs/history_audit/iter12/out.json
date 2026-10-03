@@ -1,0 +1,41 @@
+{
+  "id": "C12",
+  "claim": "BARI main table improves EF on 4/5 instances",
+  "verdict": "refuted",
+  "evidence": {
+    "bari_full": {
+      "values": [
+        57,
+        51,
+        323,
+        89,
+        220
+      ],
+      "mean": 148,
+      "improved": 3
+    },
+    "single_perspective": {
+      "values": [
+        53,
+        61,
+        331,
+        91,
+        220
+      ],
+      "mean": 151.2,
+      "improved": 2
+    },
+    "binary_cp": {
+      "values": [
+        57,
+        49,
+        323,
+        89,
+        220
+      ],
+      "mean": 147.6,
+      "improved": 3
+    }
+  },
+  "resolution": "The local full-table artifact improves 3/5 instances; missing local artifacts cannot reproduce this count. Keep architectural generalization as a separate, still limited single-seed pilot observation."
+}

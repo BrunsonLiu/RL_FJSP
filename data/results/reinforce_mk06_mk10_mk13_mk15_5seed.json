@@ -1,0 +1,150 @@
+[
+  {
+    "instance": "mk06",
+    "jobs": 10,
+    "machines": 10,
+    "operations": 150,
+    "earliest_finish": 79,
+    "reinforce_best": 69,
+    "reinforce_mean": 71,
+    "reinforce_std": 1.41,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 73,
+        "seconds": 38.94
+      },
+      {
+        "seed": 1,
+        "best": 72,
+        "seconds": 37.58
+      },
+      {
+        "seed": 2,
+        "best": 71,
+        "seconds": 37.43
+      },
+      {
+        "seed": 3,
+        "best": 69,
+        "seconds": 38.1
+      },
+      {
+        "seed": 4,
+        "best": 70,
+        "seconds": 36.47
+      }
+    ]
+  },
+  {
+    "instance": "mk10",
+    "jobs": 20,
+    "machines": 15,
+    "operations": 240,
+    "earliest_finish": 406,
+    "reinforce_best": 242,
+    "reinforce_mean": 335.6,
+    "reinforce_std": 174.28,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 258,
+        "seconds": 76.71
+      },
+      {
+        "seed": 1,
+        "best": 684,
+        "seconds": 69.23
+      },
+      {
+        "seed": 2,
+        "best": 242,
+        "seconds": 73.07
+      },
+      {
+        "seed": 3,
+        "best": 249,
+        "seconds": 75.51
+      },
+      {
+        "seed": 4,
+        "best": 245,
+        "seconds": 75.99
+      }
+    ]
+  },
+  {
+    "instance": "mk13",
+    "jobs": 30,
+    "machines": 10,
+    "operations": 231,
+    "earliest_finish": 622,
+    "reinforce_best": 464,
+    "reinforce_mean": 476.4,
+    "reinforce_std": 7.91,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 482,
+        "seconds": 44.51
+      },
+      {
+        "seed": 1,
+        "best": 483,
+        "seconds": 82.55
+      },
+      {
+        "seed": 2,
+        "best": 483,
+        "seconds": 82.61
+      },
+      {
+        "seed": 3,
+        "best": 470,
+        "seconds": 83.96
+      },
+      {
+        "seed": 4,
+        "best": 464,
+        "seconds": 83.72
+      }
+    ]
+  },
+  {
+    "instance": "mk15",
+    "jobs": 30,
+    "machines": 15,
+    "operations": 284,
+    "earliest_finish": 549,
+    "reinforce_best": 408,
+    "reinforce_mean": 419.6,
+    "reinforce_std": 6.28,
+    "seed_results": [
+      {
+        "seed": 0,
+        "best": 427,
+        "seconds": 97.38
+      },
+      {
+        "seed": 1,
+        "best": 420,
+        "seconds": 87.19
+      },
+      {
+        "seed": 2,
+        "best": 421,
+        "seconds": 35.0
+      },
+      {
+        "seed": 3,
+        "best": 422,
+        "seconds": 38.87
+      },
+      {
+        "seed": 4,
+        "best": 408,
+        "seconds": 77.15
+      }
+    ]
+  }
+]

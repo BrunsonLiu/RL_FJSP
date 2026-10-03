@@ -1,0 +1,16 @@
+[
+  {
+    "instance": "mk13",
+    "recorded_makespan": 416,
+    "validator_ok": true,
+    "validator_msg": "OK: valid schedule, makespan=416",
+    "schedule_path": "d:\\desktop2\\RL_FJSP\\data\\results\\sota_mk13_schedule.json"
+  },
+  {
+    "instance": "mk14",
+    "recorded_makespan": 694,
+    "validator_ok": true,
+    "validator_msg": "OK: valid schedule, makespan=694",
+    "schedule_path": "d:\\desktop2\\RL_FJSP\\data\\results\\sota_mk14_schedule.json"
+  }
+]

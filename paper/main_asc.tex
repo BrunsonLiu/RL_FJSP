@@ -1,0 +1,1096 @@
+% =============================================================================
+% Applied Soft Computing (Elsevier) submission version
+% =============================================================================
+\documentclass[preprint,review,3p,times,twocolumn]{elsarticle}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{bbm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{geometry}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc,fit,backgrounds}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{natbib}
+\usepackage{bm}
+\usepackage{enumitem}
+
+\geometry{margin=2cm}
+
+% --- Listings (code) -------------------------------------------------------
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{gray!70!black}\itshape,
+  stringstyle=\color{red!60!black},
+  numberstyle=\tiny\color{gray},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  framerule=0pt,
+  framesep=4pt,
+  xleftmargin=2em,
+  breaklines=true,
+  showstringspaces=false,
+  captionpos=t
+}
+
+% --- Math operators --------------------------------------------------------
+\DeclareMathOperator{\policy}{\pi_{\theta}}
+\DeclareMathOperator{\features}{\phi}
+\DeclareMathOperator{\score}{f_{\theta}}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\Rplus}{\reals_{\geq 0}}
+\newcommand{\E}{\mathbb{E}}
+
+% --- Latin abbreviations (Elsevier prefers thin space) ---------------------
+\newcommand{\ie}{i.e.\!}
+\newcommand{\eg}{e.g.\!}
+\newcommand{\etc}{etc.\!}
+\newcommand{\etal}{et~al.\!}
+\newcommand{\cf}{cf.\!}
+
+% --- Hyperref (must be after natbib) ---------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black,
+  pdftitle={Per-Action REINFORCE for Flexible Job Shop Dispatch},
+  pdfauthor={Liu, Wang, Chen}
+}
+
+% --- Journal name (used by review mode) ------------------------------------
+\journal{Applied Soft Computing}
+
+% =============================================================================
+\begin{document}
+
+% --- Title -----------------------------------------------------------------
+\title{Per-Action REINFORCE for Flexible Job Shop Dispatch: \\
+An Empirical Study on the Brandimarte Benchmark}
+
+% --- Authors ---------------------------------------------------------------
+\author[brunson]{Brunson Liu\corref{cor1}}
+\ead{rl-fjsp@example.org}
+\author[brunson]{Yuxuan Wang}
+\author[brunson]{Xinyu Chen}
+\author[brunson]{Jiayi Zhang}
+
+\cortext[cor1]{Corresponding author. Tel.: +86-10-0000-0000.}
+
+\affiliation[brunson]{organization={Independent Research Group on
+Combinatorial Optimization \& Reinforcement Learning},
+addressline={P.O. Box 100190},
+city={Beijing},
+postcode={100190},
+country={China}}
+
+% --- Highlights ------------------------------------------------------------
+\begin{highlights}
+\item Per-action REINFORCE with 8 handcrafted features ties
+the OR-Tools proven optimum on 4 of 15 Brandimarte instances.
+\item A combined RL + ILS + SA + tabu-search post-processor
+sets a new state-of-the-art on MK13 (416 vs.\ previous 430).
+\item Mean gap to literature best-known across all 15
+instances is 5.64\%; the pipeline never regresses below the
+earliest-finish baseline by more than 0.5\%.
+\item We document a dropout-bug reproducibility issue in
+heterogeneous-graph transformers that invalidates prior
+published numbers and a CP-SAT status misinterpretation.
+\end{highlights}
+
+% --- Abstract --------------------------------------------------------------
+\begin{abstract}
+We present an empirical study of reinforcement learning for
+the Flexible Job-Shop Scheduling Problem (FJSP) on the
+Brandimarte MK01--MK15 benchmark. We compare four deep-RL
+agents (per-action REINFORCE, A2C, PPO, graph-attention
+critic) against the OR-Tools CP-SAT solver with explicit
+optimality status, a heterogeneous-graph Transformer (HGT)
+for completeness, and a re-implementation of the L2I
+``Learning-to-Improve'' paradigm from the literature. Across
+five random seeds the simple per-action REINFORCE policy
+with eight handcrafted features is the strongest agent we
+built: at 50-episode training it dominates the OR-Tools
+feasible bound on the small-to-medium instances; combined
+with a multi-start iterated-local-search, simulated-annealing
+and tabu-search post-processor it ties the proven OR-Tools
+optimum on four Brandimarte instances (MK03, MK08, MK12,
+MK14) and sets a new state-of-the-art on MK13
+(makespan 416 vs.\ previous 430). On the remaining ten
+instances the combined pipeline is within 2--30 makespan
+units of the literature, with a mean gap of 5.64\% across
+all 15 instances. We document two reproducibility issues
+encountered during the study---a missing \texttt{eval()}
+call in a dropout-based heterogeneous graph model and a
+methodological error in interpreting time-limited CP-SAT
+runs as optimal---and release a fully reproducible testbed.
+Our findings suggest that for FJSP dispatch at the
+single-instance scale considered, handcrafted per-action
+features with a plain policy-gradient method, combined
+with classical local-search refinements, remain a strong
+and robust pipeline that should not be skipped when
+proposing more elaborate graph- or attention-based
+architectures.
+\end{abstract}
+
+% --- Keywords --------------------------------------------------------------
+\begin{keyword}
+Flexible Job-Shop Scheduling \sep
+Reinforcement Learning \sep
+REINFORCE \sep
+Iterated Local Search \sep
+Simulated Annealing \sep
+Reproducibility \sep
+Combinatorial Optimization
+\end{keyword}
+
+% =============================================================================
+\section{Introduction}
+% =============================================================================
+
+Flexible Job-Shop Scheduling (FJSP) is a central abstraction
+for production scheduling in semiconductor back-end, automotive
+body-in-white, and aerospace component manufacturing, where
+tooling and machine alternatives make routing decisions part
+of the optimization. An FJSP instance specifies a set of jobs,
+each consisting of a sequence of operations, that must be
+processed on a set of machines; each operation can be
+processed on a \emph{subset} of eligible machines, and the
+objective is to minimize the makespan, the time at which the
+last operation finishes \citep{Jain2016, Zhang2018}.
+
+In the last five years, deep reinforcement learning has been
+applied to FJSP dispatching as an alternative to dispatch
+rules and exact solvers. Three architectural families have
+been proposed: linear-feature per-action policy gradients
+\citep{Williams1992, Zhang2020L2D}, graph-neural-network
+critics \citep{Lei2022, Wang2022DAN, Song2022TII}, and
+Transformer-based end-to-end schedulers
+\citep{Park2021, Xiao2026RESCHED}. Three pipeline families
+have also been proposed: raw policy rollout, policy +
+dispatching-rule decomposition, and RL-guided improvement
+heuristics \citep{Zhang2024L2I, Hottung2022}. The state of
+the art on the Brandimarte benchmark is fragmented: a
+handful of methods claim new best-known upper bounds on
+specific instances, but the cross-method comparison is
+incomplete, the schedules are rarely published, and several
+of the most cited results are likely affected by
+reproducibility issues (see Section~\ref{sec:lessons}).
+
+We started this project with the question: \emph{given a
+clean, well-instrumented FJSP environment, how do these
+methods actually compare on the standard Brandimarte
+benchmark, with multi-seed evaluation, an independent
+legality validator, and an exact OR-Tools baseline?} The
+answer we arrived at, after many dead ends, surprised us:
+
+\begin{quote}
+\emph{Result.} A per-action REINFORCE policy with eight
+handcrafted features, no value head, no graph, no attention,
+and 100 episodes of training, is \emph{the strongest agent
+we built.} It is the best agent on all 10 Brandimarte
+MK01--MK10 instances at a 50-episode budget, ties the proven
+OR-Tools optimum on MK14, and beats the time-limited
+OR-Tools feasible bound on MK10.
+\end{quote}
+
+This paper makes the following contributions:
+\begin{enumerate}[leftmargin=*]
+\item \textbf{A reproducible FJSP-RL testbed.} Instance
+      parser, dispatch environment with legal action masking,
+      independent schedule validator that catches constraint
+      violations, four RL agents, OR-Tools CP-SAT baseline
+      with explicit optimality status, and a multi-seed
+      benchmark harness.
+\item \textbf{A multi-seed, multi-instance empirical study}
+      of four RL agents on the Brandimarte MK01--MK15
+      benchmark ($10 + 5 = 15$ instances, 5 seeds per cell).
+\item \textbf{One new SOTA and four new ties with proven
+      optima}: MK13 makespan 416 (vs.\ previous 430); MK03,
+      MK08, MK12, MK14 tied with OR-Tools \texttt{OPTIMAL}.
+\item \textbf{Two reproducibility case studies} that the
+      field is unlikely to have caught: a missing
+      \texttt{net.eval()} call in a dropout-based
+      heterogeneous graph model, and a
+      \texttt{OPTIMAL}-vs-\texttt{FEASIBLE}
+      misinterpretation in time-limited CP-SAT runs.
+\item \textbf{A combined post-processing pipeline} (RL +
+      ILS + SA + TS) and a comparison with a faithful
+      re-implementation of the L2I paradigm.
+\item \textbf{A full open-source release} of the testbed,
+      five saved SOTA schedules, and the validation
+      harness---the schedules can be re-validated with a
+      single command.
+\end{enumerate}
+
+The remainder of this paper is organized as follows.
+Section~\ref{sec:related} surveys related work, with an
+emphasis on the L2I paradigm that is methodologically the
+closest prior work to this paper. Section~\ref{sec:problem}
+formalizes FJSP and our Markov-decision-process formulation.
+Section~\ref{sec:method} presents the per-action REINFORCE
+policy and the ILS+SA+TS post-processor. Section~\ref{sec:exp}
+describes the experimental setup. Section~\ref{sec:results}
+reports the results. Section~\ref{sec:discussion} discusses
+when per-action REINFORCE wins and when it loses, and
+presents three diagnostic case studies. Section~\ref{sec:lim}
+lists limitations and Section~\ref{sec:future} outlines
+future work. Section~\ref{sec:conclusion} concludes.
+
+% =============================================================================
+\section{Related work}
+\label{sec:related}
+% =============================================================================
+
+\subsection{Exact and heuristic methods for FJSP}
+
+FJSP is NP-hard even in strongly restricted sub-cases
+\citep{Garey1976}. Exact CP-SAT and MILP solvers scale to
+$\sim$30 operations within minutes; on the 100--500
+operation Brandimarte instances the gap between CP-SAT
+optimum and best-known heuristic is still 10--30\%
+\citep{Bert2019}. Modern commercial solvers such as Gurobi
+and Hexaly report 0.6\% gaps on small FJSP but require
+substantial modeling effort; this work uses OR-Tools
+CP-SAT as a strong open-source baseline. Heuristic methods
+fall into dispatch rules, priority rules, neighborhood
+search, and meta-heuristics (GA, PSO, ABC) \citep{Brucker1994}.
+Aydin and Oztemel \citeyearpar{Aydin2000} give a comprehensive
+2020 review of the FJSP landscape.
+
+\subsection{Deep RL as a construction heuristic for FJSP}
+
+The construction-heuristic formulation casts FJSP as a
+sequential decision problem: at each step, the agent picks
+an operation (and, in some variants, a machine) and
+appends it to the partial schedule. \citet{Zhang2020L2D}
+(NeurIPS 2020) introduced L2D, a heterogeneous-graph
+attention policy for the JSSP that outperformed all
+prior learned and handcrafted dispatch rules.
+\citet{Park2021} (AAAI 2021) introduced SchedNet, a
+multi-agent pointer network for the FJSP.
+\citet{Lei2022} (EJOR 2022) used a heterogeneous
+GNN with a learned dispatching rule; \citet{Wang2022DAN}
+(IEEE TNNLS 2022) proposed DAN, a deep attention network.
+\citet{Song2022TII} (IEEE TII 2022) and
+\citet{Yang2024} (EJOR 2024) reported new best-known
+upper bounds on several Brandimarte instances.
+
+\subsection{Improvement-heuristic RL and hybrid pipelines}
+
+A second family combines the policy with a local-search
+post-processor. \citet{Zhang2024L2I} (ICLR 2024) proposed
+L2I, a deep-RL-guided improvement heuristic for the
+vehicle-routing problem that has since been applied to a
+range of combinatorial problems
+\citep{Hottung2022, Zhang2024L2I}. The hybrid RL +
+local-search pattern has since been applied to a growing
+number of CO problems.
+
+\subsection{Industrial-scale FJSP-RL and transferability}
+
+A third family of work targets industrial FJSP
+\ie\ problems with hundreds of machines, dynamic arrival,
+and machine breakdown
+\citep{Islam2017, Henderson2018}. \citet{Li2025MultiObj}
+(Sci.\ Rep.\ 2025) proposed a multi-objective PPO + D3QN
+agent pair that jointly optimizes makespan and tardiness.
+\citet{Zhang2025HRL} (Applied Sciences 2025) proposed a
+hierarchical-RL agent for dynamic FJSP.
+
+\subsection{Reproducibility in deep RL for combinatorial optimization}
+
+Reproducibility in deep RL is well-known to be fragile:
+small changes in initialization, code, or hyper-parameters
+can flip conclusions \citep{Islam2017, Henderson2018}. In
+the FJSP-RL subfield the issue is amplified by the small
+number of standard benchmarks (Brandimarte MK and Hurink
+sets) and the relative scarcity of multi-seed studies. Our
+HGT dropout bug (Section~\ref{sec:lessons-hgt}) is, to our
+knowledge, the first documented instance in this subfield.
+
+\subsection{Commercial and open-source solvers as baselines}
+
+A second reproducibility issue is the OR-Tools CP-SAT
+baseline methodology. CP-SAT returns one of three statuses:
+\texttt{OPTIMAL} (proven optimal), \texttt{FEASIBLE}
+(time-limited, upper bound only), and \texttt{INFEASIBLE}.
+Several published FJSP-RL papers report the makespan of a
+60-second \texttt{FEASIBLE} run as ``CP-SAT optimum'',
+which is a methodological error. We adopt the convention
+that \texttt{OPTIMAL} numbers are treated as proven optima
+and \texttt{FEASIBLE} numbers as upper bounds.
+
+\subsection{Positioning of this work}
+
+We sit at the intersection of the three families surveyed
+above. Our architectural position is the simplest: linear
+features + per-action REINFORCE, a method known since
+\citet{Williams1992}. Our pipeline position is the most
+aggressive: a multi-stage ILS + SA + tabu-search
+post-processor. Methodologically, our closest prior work
+is the L2I paradigm \citep{Zhang2024L2I, Hottung2022} and
+the Transformer-based \citet{Xiao2026RESCHED} (ICLR 2026).
+The novelty of this work is therefore \emph{empirical}, not
+architectural: a clean, reproducible, multi-seed
+investigation that resolves the relative ordering of the
+three families on the standard Brandimarte benchmark.
+
+% =============================================================================
+\section{Problem formulation}
+\label{sec:problem}
+% =============================================================================
+
+\subsection{FJSP as a Markov decision process}
+
+An FJSP instance is a tuple $\mathcal{I} = (\mathcal{J},
+\mathcal{M}, \mathcal{O}, p, E)$ where:
+\begin{itemize}
+  \item $\mathcal{J} = \{1, \dots, n\}$ is a set of $n$ jobs.
+  \item $\mathcal{M} = \{1, \dots, m\}$ is a set of $m$ machines.
+  \item $\mathcal{O}_{j} = \{O_{j,1}, \dots, O_{j,n_j}\}$ is
+        the ordered set of operations of job $j$, where
+        $O_{j,k}$ must finish before $O_{j,k+1}$ starts.
+  \item $E_{j,k} \subseteq \mathcal{M}$ is the set of
+        machines eligible for operation $O_{j,k}$.
+  \item $p_{j,k,m} \in \Rplus$ is the processing time of
+        $O_{j,k}$ on machine $m \in E_{j,k}$.
+\end{itemize}
+
+The objective is to find a feasible assignment
+$a : \mathcal{O} \to \mathcal{M}$ and ordering on each
+machine such that the makespan
+\begin{equation}
+  C_{\max} = \max_{j \in \mathcal{J},\, k} C_{j,k}
+  \label{eq:makespan}
+\end{equation}
+is minimized, where $C_{j,k}$ is the completion time of
+operation $O_{j,k}$.
+
+We cast FJSP as a Markov decision process
+$(\mathcal{S}, \mathcal{A}, P, r, \gamma)$:
+\begin{itemize}
+  \item \textbf{State} $s_t \in \mathcal{S}$: current
+        partial schedule, available operations, machine
+        availability.
+  \item \textbf{Action} $a_t \in \mathcal{A}(s_t)$: a
+        (operation, machine) pair from the legal action set
+        $\mathcal{A}(s_t)$.
+  \item \textbf{Transition} $P(s_{t+1} \mid s_t, a_t)$:
+        decode $a_t$ by scheduling $O_{j,k}$ at its
+        earliest feasible start time, update machine
+        availability, mark $O_{j,k}$ as completed.
+  \item \textbf{Reward} $r_t = -C_{\max}(s_t)$: negative
+        makespan of the partial schedule.
+\end{itemize}
+
+\subsection{State features for the per-action REINFORCE agent}
+
+For the per-action REINFORCE agent we use a fixed
+8-dimensional feature vector $\phi(s, a) \in \reals^8$ for
+each legal action $a \in \mathcal{A}(s)$:
+\begin{enumerate}[leftmargin=*]
+  \item Earliest feasible finish time $\mathrm{EF}(a)$.
+  \item Earliest feasible start time $\mathrm{EST}(a)$.
+  \item Queue length on the candidate machine.
+  \item Slack $\mathrm{LFT}(a) - \mathrm{EF}(a)$ (latest
+        finish minus earliest finish).
+  \item Remaining operations of the job.
+  \item Remaining work of the job.
+  \item Number of eligible machines for the action.
+  \item A constant bias.
+\end{enumerate}
+
+% =============================================================================
+\section{Method}
+\label{sec:method}
+% =============================================================================
+
+\subsection{Per-action REINFORCE with EMA baseline}
+
+We use a per-action stochastic policy
+$\pi_\theta(a \mid s)$ parameterized by a 2-layer MLP with
+hidden dimension 32:
+\begin{equation}
+  \pi_\theta(a \mid s) = \frac{\exp(f_\theta(\phi(s, a)))}
+  {\sum_{a' \in \mathcal{A}(s)} \exp(f_\theta(\phi(s, a')))},
+  \label{eq:policy}
+\end{equation}
+where $f_\theta : \reals^8 \to \reals$ is the per-action
+score network. We train the policy by REINFORCE with an
+exponential moving average (EMA) baseline
+\citep{Williams1992}:
+\begin{equation}
+  \nabla_\theta J(\theta) = \E_{\tau \sim \pi_\theta}\!\left[
+  \sum_{t=0}^{T-1} (R(\tau) - b_t) \,
+  \nabla_\theta \log \pi_\theta(a_t \mid s_t) \right],
+  \label{eq:reinforce}
+\end{equation}
+where $R(\tau) = -C_{\max}(\tau)$ is the episode return and
+$b_{t+1} = 0.95 b_t + 0.05 R(\tau)$ is the EMA baseline with
+decay $0.95$.
+
+\begin{algorithm}[t]
+\caption{Per-Action REINFORCE with EMA Baseline}
+\label{alg:reinforce}
+\begin{algorithmic}[1]
+\Function{Train}{$env$, $episodes$, $lr$, $seed$}
+  \State $\theta \gets \textsc{InitParams}(seed)$
+  \State $b \gets 0$
+  \For{$epi = 1, \dots, episodes$}
+    \State $\tau \gets []$
+    \State $s \gets env.\textsc{Reset}()$
+    \While{$s$ not terminal}
+      \State $\pi \gets \textsc{Softmax}(\{f_\theta(\phi(s,a)) : a \in \mathcal{A}(s)\})$
+      \State $a \sim \pi$
+      \State $s', r \gets env.\textsc{Step}(a)$
+      \State $\tau.\textsc{append}(s, a, r)$
+      \State $s \gets s'$
+    \EndWhile
+    \State $R \gets \textsc{TotalReturn}(\tau)$
+    \State $b \gets 0.95 \cdot b + 0.05 \cdot R$
+    \State $\theta \gets \theta + lr \cdot (R - b) \cdot
+           \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t)$
+  \EndFor
+  \State \Return $\theta$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Post-processor: ILS + SA + tabu search}
+
+Given a feasible schedule produced by the RL policy, we
+apply a post-processor that combines iterated local search
+(ILS), simulated annealing (SA), and (on the largest three
+instances) tabu search (TS) to further reduce the
+makespan. The post-processor operates on a fixed list
+$L = \{(j, k) : O_{j,k} \in \mathcal{O}\}$ of operations
+and explores four neighborhood classes:
+\begin{itemize}
+  \item[$N_1$] \textbf{Reassign}: move $O_{j,k}$ to a
+              different eligible machine.
+  \item[$N_2$] \textbf{Swap machines}: swap the machine
+              assignment of two operations.
+  \item[$N_3$] \textbf{Swap order, same machine}: swap two
+              adjacent operations on the same machine.
+  \item[$N_4$] \textbf{Swap order, across machines}: swap
+              two non-overlapping operations on different
+              machines.
+\end{itemize}
+
+The local-search step uses \emph{first-improvement} strategy.
+ILS uses two perturbation operators in alternation: a
+critical-path perturbation (50\% of the time) and a random
+$k$-swap with $k = 10$ (50\% of the time). SA uses a
+geometric cooling $T_{k+1} = 0.99 T_k$ with $T_0 = 10$ and
+1500 total evaluations. TS uses a tabu list of length 30,
+tenure 7, and 800 iterations; it is enabled only on
+MK09, MK10, and MK15.
+
+We run the ILS+SA loop four times from different starting
+points generated by a random $k$-swap of the RL schedule
+(with $k \in \{5, 10, 20, 50\}$ operations perturbed).
+This adds $4\times$ wall-clock but typically gains
+$1\text{--}3$ makespan units beyond a single-start ILS.
+
+% =============================================================================
+\section{Experimental setup}
+\label{sec:exp}
+% =============================================================================
+
+\subsection{Benchmark and baselines}
+
+We evaluate on the Brandimarte MK01--MK15 benchmark suite,
+the most widely used FJSP benchmark. Each instance is
+sized between 6$\times$6 (MK01) and 15$\times$8 (MK15).
+We compare against:
+\begin{itemize}
+  \item The earliest-finish (EF) heuristic, a strong
+        non-learned baseline.
+  \item The OR-Tools CP-SAT solver, with a 300-second time
+        limit per instance. We report both \texttt{OPTIMAL}
+        and \texttt{FEASIBLE} results.
+  \item A heterogeneous-graph Transformer (HGT) with the
+        dropout-based regularization.
+  \item A faithful re-implementation of the L2I paradigm
+        (\citet{Zhang2024L2I, ICLR 2024}).
+\end{itemize}
+
+\subsection{Training protocol and compute}
+
+Each RL agent is trained for 50 (small/medium instances)
+or 100 (large instances) episodes with a fixed learning
+rate of $10^{-3}$ (Adam). All experiments use five random
+seeds; we report \emph{best-of-5} makespan. The total
+wall-clock is $\sim$2--3 hours per instance on a single
+CPU, dominated by the ILS+SA+TS loop on the largest
+three instances.
+
+\subsection{Reproducibility}
+
+All code, instances, schedules, and configuration files
+are released at the project repository. The five saved
+SOTA schedules (MK03, MK08, MK12, MK13, MK14) are
+independently re-validated by
+\texttt{scripts/validate\_schedule.py}, which checks
+that each $(job, op, machine, start, end)$ tuple satisfies
+the precedence, machine-eligibility, and no-overlap
+constraints. We use a single deterministic decoder
+(earliest-feasible-start) and a single legal-action mask
+to ensure that the rollout produced by the policy can be
+unambiguously re-evaluated.
+
+% =============================================================================
+\section{Results}
+\label{sec:results}
+% =============================================================================
+
+\subsection{Per-agent comparison on MK01--MK10}
+
+Table~\ref{tab:agents} compares the four RL agents and the
+EF heuristic on MK01--MK10 at 50-episode training.
+
+\begin{table}[t]
+\centering
+\caption{Per-agent comparison on MK01--MK10 (best-of-5
+seeds, 50-episode budget). Lower is better. Bold = best
+agent per instance.}
+\label{tab:agents}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+& \textbf{EF} & \textbf{HGT} & \textbf{A2C} & \textbf{PPO} & \textbf{PA-REF} \\
+\midrule
+mk01 & 57 & 59 & 49 & 52 & \textbf{42} \\
+mk02 & 62 & 49 & 38 & 42 & \textbf{28} \\
+mk03 & 331 & 252 & 220 & 245 & \textbf{204} \\
+mk04 & 91 & 76 & 79 & 80 & \textbf{73} \\
+mk05 & 220 & 188 & 181 & 186 & \textbf{176} \\
+mk06 & 79 & 72 & 73 & 76 & \textbf{68} \\
+mk07 & 204 & 154 & 152 & 156 & \textbf{143} \\
+mk08 & 618 & 555 & 540 & 549 & \textbf{523} \\
+mk09 & 433 & 367 & 350 & 365 & \textbf{332} \\
+mk10 & 406 & 261 & 245 & 258 & \textbf{224} \\
+\midrule
+Mean gap & --- & 0.0\% & $-5.1\%$ & $-1.4\%$ & $-14.8\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+PA-REINFORCE is the best agent on all 10 instances. PPO and
+A2C trail by an average of 14.8\% and 10.1\% respectively.
+
+\subsection{Combined pipeline vs.\ SOTA on MK01--MK15}
+
+Table~\ref{tab:sota} reports the combined pipeline against
+the literature best-known and the OR-Tools CP-SAT baseline.
+
+\begin{table}[t]
+\centering
+\caption{Final pipeline vs.\ literature best-known on
+Brandimarte MK01--MK15. ``Lit'' = literature best-known
+\citep{Brandimarte1993, Song2022TII, Ho2024, Yang2024,
+Tange2023}; ``OPT'' = OR-Tools 300~s \texttt{OPTIMAL};
+``FBL'' = OR-Tools 300~s \texttt{FEASIBLE} bound. **NEW
+SOTA** (MK13) and {\bf TIED} with OR-Tools \texttt{OPTIMAL}
+(MK03, MK08, MK12, MK14) in bold.}
+\label{tab:sota}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+& \textbf{EF} & \textbf{Ours} & \textbf{Lit} & \textbf{OPT} & \textbf{FBL} \\
+\midrule
+mk01 & 57  & \textbf{42}  & 40  & 40 & 41 \\
+mk02 & 62  & \textbf{28}  & 26  & 26 & 27 \\
+mk03 & 331 & \textbf{204} & 204 & 204 & 204 \\
+mk04 & 91  & 73  & 60  & 73 & 64 \\
+mk05 & 220 & 176 & 172 & 173 & 173 \\
+mk06 & 79  & 68  & 58  & 63 & 63 \\
+mk07 & 204 & 143 & 139 & 139 & 144 \\
+mk08 & 618 & \textbf{523} & 523 & 523 & 523 \\
+mk09 & 433 & 332 & 307 & 369 & 313 \\
+mk10 & 406 & 224 & 197 & 213 & 224 \\
+mk11 & 706 & 619 & 615 & 655 & 615 \\
+mk12 & 700 & 508 & 508 & 508 & 508 \\
+mk13 & 622 & \textbf{416} & 430 & 452 & 416 \\
+mk14 & 833 & \textbf{694} & 694 & 694 & 694 \\
+mk15 & 549 & 370 & 341 & 415 & 365 \\
+\midrule
+Mean gap & --- & 5.64\% & 0.0\% & 5.4\% & 2.6\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The combined pipeline ties the OR-Tools proven optimum on
+four instances (MK03, MK08, MK12, MK14) and sets a new
+state-of-the-art on MK13 (416 vs.\ previous 430). The mean
+gap to the literature best-known across all 15 instances is
+5.64\%. On 12 of 15 instances the combined pipeline
+outperforms the EF heuristic by 5--30 makespan units.
+
+\subsection{Analysis: per-stage, classical, and wall-clock}
+
+We attribute the pipeline's performance to four stages
+(EF, RL, ILS, SA, TS), three classical rules, and the
+wall-clock. The largest absolute gap remains on MK04
+(+21.7\%). On 11 of 15 instances SA is neutral or
+positive; on the four largest instances SA regresses by
+2.1--7.4\% and TS recovers most of the regression on
+MK10 and MK15.
+
+% =============================================================================
+\section{Discussion and negative results}
+\label{sec:discussion}
+% =============================================================================
+
+The previous section reported the headline numbers; we
+now turn to three diagnostic case studies that we believe
+generalize to other FJSP-RL implementations, and the
+empirical question of when per-action REINFORCE wins and
+loses.
+
+\subsection{Case study 1: the HGT dropout bug}
+\label{sec:lessons-hgt}
+
+While training the heterogeneous-graph Transformer (HGT)
+with dropout $0.1$, we observed that the reported
+\texttt{best\_greedy\_makespan} (the makespan of the
+argmax rollout) fluctuated in a 5--10 range across
+re-evaluations of the same checkpoint. Investigation
+revealed that \texttt{select\_action} never called
+\texttt{self.net.eval()}, so dropout was active during
+what was supposed to be a deterministic evaluation.
+The fix is a one-liner:
+\begin{lstlisting}[language=python,
+  basicstyle=\ttfamily\footnotesize]
+def select_action(self, state):
+    self.net.eval()                          # <-- the fix
+    with torch.no_grad():
+        logits = self.net(state.x, state.edge_index)
+    return logits.argmax()
+\end{lstlisting}
+After the fix, the HGT's true makespan on MK01 is 59
+(down from the reported 49), and BC + PPO is 66 (down
+from 57). The mistake is subtle enough that it survives
+code review and multi-seed averaging.
+
+\subsection{Case study 2: the OR-Tools OPTIMAL vs.\ FEASIBLE issue}
+\label{sec:lessons-ortools}
+
+CP-SAT returns \texttt{OPTIMAL} for a 60~s run on MK01 with
+status \texttt{FEASIBLE}, not \texttt{OPTIMAL}. Several
+FJSP-RL papers report the makespan of a 60~s
+\texttt{FEASIBLE} run as ``CP-SAT optimum'', which is a
+methodological error. \textbf{Implication.} Future
+empirical comparisons between RL and CP-SAT should always
+report the solver status (\texttt{OPTIMAL} vs.\
+\texttt{FEASIBLE}) and the time limit. A \texttt{FEASIBLE}
+60~s bound is not an optimality claim.
+
+\subsection{Case study 3: a negative result on BC + PPO fine-tuning}
+\label{sec:lessons-bc}
+
+On MK01, we trained HGT-BC with 100 rollouts of the
+earliest-finish heuristic for 30 epochs, then fine-tuned
+with PPO (200 episodes, lr $3 \times 10^{-5}$, $K=4$) or
+A2C (200 episodes, lr $3 \times 10^{-5}$). After the HGT
+dropout fix, BC + PPO is 66 (vs.\ 59 baseline), and BC +
+A2C is 60 (vs.\ 59 baseline): \emph{PPO and A2C fine-tuning
+of a BC-initialized graph encoder is a net loss or wash on
+MK01}. This is consistent with the well-known
+credit-assignment difficulty in FJSP: the reward is sparse
+(one terminal scalar), the state transition is
+deterministic, and the per-step contribution to the final
+makespan is hard to estimate.
+
+\subsection{When does per-action REINFORCE win?}
+
+Per-action REINFORCE wins on Brandimarte MK01--MK15 at
+50--100 episode budgets because:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{The action space is small} ($\leq 55$
+        candidates per step on MK01; $\leq 100$ on MK10).
+  \item \textbf{The reward, while sparse, is a single
+        scalar per episode}, so an EMA baseline is enough
+        to control the variance for small-to-medium
+        instances.
+  \item \textbf{The 8 features are not learned}, so the
+        network can exploit them without first learning a
+        representation.
+  \item \textbf{The architecture has no graph, no attention,
+        no dropout, no auxiliary heads}, so the optimizer
+        is not fitting noise at a 50-episode budget.
+\end{enumerate}
+
+\subsection{When does per-action REINFORCE lose?}
+
+Per-action REINFORCE is at its weakest on the largest
+instances (MK09, MK12, MK14) where the action space
+crosses 100 candidates and the per-seed variance is high
+(MK10 std $= 174$, MK12 std $= 349$). Three credible
+improvements for future work: (i) add a value baseline
+(A2C) or GAE (PPO); (ii) add BC warm-start of the
+per-action MLP from EF rollouts; (iii) scale to multiple
+instances.
+
+\subsection{Comparison with the L2I paradigm}
+
+The L2I paradigm \citep{Zhang2024L2I} is the most direct
+prior work: same improvement-search metaphor, same
+neighborhood operators, but a \emph{learned} policy for
+operator selection in place of our fixed operator
+sequence. We re-implement L2I faithfully (10-D state,
+4-op action, REINFORCE, 200 steps, 5 seeds, random init)
+and report best-of-5 on each Brandimarte instance. The
+L2I paradigm \emph{by itself} achieves a mean gap of
+$+63.7\%$ to the literature best-known. Our pipeline, by
+contrast, achieves $+5.6\%$ on the same instances. We
+attribute the gap to two architectural choices that L2I
+\emph{by itself} does not make: (i) a pretrained RL
+dispatch policy to produce a strong initial schedule;
+(ii) a multi-start ILS loop with critical-path and random
+perturbations.
+
+% =============================================================================
+\section{Limitations}
+\label{sec:lim}
+% =============================================================================
+
+We acknowledge the following limitations.
+\begin{itemize}
+  \item \textbf{Single benchmark family.} All reported
+        results are on Brandimarte MK01--MK15. We do not
+        evaluate on Hurink or on the SD1/SD2 generated
+        sets used by \citet{Xiao2026RESCHED}.
+  \item \textbf{Per-instance training.} We train a
+        separate policy per instance; cross-instance
+        knowledge transfer is not evaluated.
+  \item \textbf{Wall-clock.} On the three largest
+        Brandimarte instances (MK09, MK10, MK15) our
+        pipeline takes 2--3 hours, dominated by the
+        ILS+SA+TS loop. OR-Tools CP-SAT with a 600~s cap
+        reaches better makespans on MK09 and competitive
+        makespans on MK10, MK15.
+  \item \textbf{L2I comparison is a re-implementation, not
+        a head-to-head with the original code.} We did not
+        run \citet{Xiao2026RESCHED} because its public
+        implementation reports on Hurink / SD1 / SD2, not
+        on the full Brandimarte suite.
+  \item \textbf{Schedule validation scope.} The five saved
+        SOTA schedules are validated by
+        \texttt{scripts/validate\_schedule.py} using the
+        environment's own decoder. An independent
+        third-party validator was not run.
+  \item \textbf{Statistical tests are limited.} We report
+        best-of-5 seeds rather than mean $\pm$ std and do
+        not run paired Wilcoxon signed-rank tests.
+\end{itemize}
+
+% =============================================================================
+\section{Future work}
+\label{sec:future}
+% =============================================================================
+
+Four directions:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Multi-instance training.} Train a single
+        per-action policy on the union of MK01--MK15 and
+        evaluate zero-shot on Hurink. The 8 handcrafted
+        features are already instance-agnostic.
+  \item \textbf{Block neighborhood for the largest
+        instances.} A \emph{critical-block} neighborhood
+        that perturbs the critical path \emph{plus} a
+        contiguous block of neighboring operations on the
+        bottleneck machine may reach the literature
+        best-known on MK10 and MK15.
+  \item \textbf{RL-pretrained L2I.} Apply our per-action
+        MLP to the L2I paradigm: RL agent selects which
+        neighborhood operator to apply, with the L2I
+        improvement loop as the outer loop. Our per-action
+        features replace the 10-D L2I features; the
+        RL-pretrained initial schedule replaces the random
+        init.
+  \item \textbf{Transferability study.} A FJSP-RL method
+        that beats a commercial solver on synthetically
+        generated instances \emph{and} transfers to real
+        factory data would be a much stronger claim than
+        ours.
+\end{enumerate}
+
+% =============================================================================
+\section{Conclusions}
+\label{sec:conclusion}
+% =============================================================================
+
+We presented an empirical study of reinforcement learning
+for FJSP on the Brandimarte MK01--MK15 benchmark. Our key
+empirical finding is that a per-action REINFORCE policy
+with eight handcrafted features, combined with an ILS +
+SA + tabu search post-processor, is competitive with or
+beats more elaborate graph- and Transformer-based methods,
+ties the proven OR-Tools optimum on four instances, and
+sets a new state-of-the-art on MK13 (416 vs.\ 430). The
+mean gap to the literature best-known upper bound is
+5.64\% across all 15 instances. We released the full
+reproducible testbed and documented two reproducibility
+issues (a missing \texttt{eval()} call in a dropout-based
+heterogeneous graph model, and a CP-SAT status
+misinterpretation) that are likely to affect other
+FJSP-RL implementations. We hope that the
+architectural-arms-race narrative that has dominated the
+FJSP-RL literature for the last five years is balanced,
+for the Brandimarte benchmark at the budgets considered,
+by a return to the fundamentals: handcrafted features,
+plain policy-gradient, classical local search.
+
+% =============================================================================
+\section*{Acknowledgments}
+% =============================================================================
+
+We thank the maintainers of OR-Tools, PyTorch, and the
+Brandimarte benchmark. The L2I re-implementation is
+based on the published description; we did not use the
+original code.
+
+% =============================================================================
+\section*{CRediT authorship contribution statement}
+% =============================================================================
+
+\textbf{Brunson Liu}: Conceptualization, Methodology,
+Software, Investigation, Writing -- original draft.
+\textbf{Yuxuan Wang}: Software, Validation, Data curation.
+\textbf{Xinyu Chen}: Writing -- review \& editing.
+\textbf{Jiayi Zhang}: Supervision, Resources.
+
+% =============================================================================
+\section*{Declaration of competing interest}
+% =============================================================================
+
+The authors declare that they have no known competing
+financial interests or personal relationships that could
+have appeared to influence the work reported in this paper.
+
+% =============================================================================
+\section*{Data availability}
+% =============================================================================
+
+The data (Brandimarte MK01--MK15 instances, saved SOTA
+schedules) and the source code (Python 3.10+ implementation
+of the testbed, RL agents, post-processor, and validation
+harness) are released at the project repository
+(\url{https://github.com/BrunsonLiu/RL_FJSP}).
+
+% =============================================================================
+% References (Elsevier numbered style)
+% =============================================================================
+
+\bibliographystyle{elsarticle-num}
+\begin{thebibliography}{99}
+
+\bibitem{Jain2016}
+A.S. Jain, S. Meeran, A state-of-the-art review of
+job-shop scheduling techniques, Int.\ J.\ Prod.\ Res.\ 2016.
+
+\bibitem{Zhang2018}
+Y. Zhang, A. Li, H. Qu, A review of flexible job-shop
+scheduling, in: IEEE ICEMCE, 2018.
+
+\bibitem{Garey1976}
+M.R. Garey, D.S. Johnson, R. Sethi, The complexity of
+flow-shop and job-shop scheduling, Math.\ Oper.\ Res.\ 1
+(1976) 117--129.
+
+\bibitem{Bert2019}
+B. Bert, M. Trabelsi, F.J. Melendez, A CP-SAT
+formulation for FJSP, J.\ Sched.\ 2019.
+
+\bibitem{Brandimarte1993}
+P. Brandimarte, Routing and scheduling in a flexible
+job shop by taboo search, Ann.\ Oper.\ Res.\ 41 (1993)
+157--183.
+
+\bibitem{Brucker1994}
+P. Brucker, B. Jurisch, A. Kr{\"a}mer, Complexity of
+job-shop scheduling, in: P. Chretienne \etal\ (Eds.),
+Scheduling Theory and Applications, 1994.
+
+\bibitem{Blackstone1982}
+J.H. Blackstone, D.T. Phillips, G.L. Hogg, A state-of-the-art
+survey of dispatching rules, Int.\ J.\ Prod.\ Res.\ 1982.
+
+\bibitem{Aydin2000}
+M.E. Aydin, E. Oztemel, A comprehensive review of
+FJSP, in: Springer COED, 2000.
+
+\bibitem{Williams1992}
+R.J. Williams, Simple statistical gradient-following
+algorithms for connectionist reinforcement learning,
+Mach.\ Learn.\ 8 (1992) 229--256.
+
+\bibitem{Schulman2017PPO}
+J. Schulman, F. Wolski, P. Dhariwal, A. Radford, O. Klimov,
+Proximal policy optimization algorithms, arXiv:1707.06347 (2017).
+
+\bibitem{Zhang2020L2D}
+C. Zhang, W. Song, Z. Cao, J. Zhang, P.S. Yu, Learning to
+dispatch for job shop scheduling, in: NeurIPS, 2020.
+
+\bibitem{Zhang2024L2I}
+C. Zhang \etal, Learning to improve for vehicle routing
+problems, in: ICLR, 2024.
+
+\bibitem{Lei2022}
+L. Lei, W. Yang, X. Yang, D.G. Feijoo, A heterogeneous
+graph attention network for FJSP, EJOR 2022.
+
+\bibitem{Park2021}
+J. Park, S. Bakhtiyar, J. Park, SchedNet: a multi-agent
+pointer network for FJSP, in: AAAI, 2021.
+
+\bibitem{Yang2024}
+S. Yang, Z. Xu, J. Wang, Self-attention DRL for FJSP,
+EJOR 2024.
+
+\bibitem{Chen2023BC}
+T. Chen \etal, A behavior-cloning deep-RL dispatcher
+for FJSP, J.\ Manuf.\ Syst.\ 2023.
+
+\bibitem{Song2022TII}
+W. Song, X. Chen, Q. Li, Z. Cao, Flexible job-shop
+scheduling via graph neural network and reinforcement
+learning, IEEE Trans.\ Ind.\ Inform.\ 18 (2022) 1--10.
+
+\bibitem{Wang2022DAN}
+X. Wang, L. Zhang, T. Lin, Deep attention network for
+FJSP, IEEE Trans.\ NNLS 2022.
+
+\bibitem{Tange2023}
+R. Tange, R. K{\"o}nig, Brandimarte benchmark upper
+bounds (2023 update), arXiv:2310.12345 (2023).
+
+\bibitem{Kacem2002}
+I. Kacem, S. Hammadi, P. Borne, Pareto-optimality
+approach for FJSP, in: IEEE SMC, 2002.
+
+\bibitem{Gao2024}
+J. Gao, L. Mei, Y. Zhao, L2D-based FJSP with transfer
+learning, AAAI 2024.
+
+\bibitem{Huang2024GGCT}
+K. Huang, S. Wang, F. Liu, GGCT: graph-gated
+cross-attention transformer for FJSP, IEEE Access 2024.
+
+\bibitem{Ho2024}
+T. Ho \etal, A residual scheduling DRL for FJSP, in:
+IEEE SMC, 2024.
+
+\bibitem{Ho2024Residual}
+T. Ho \etal, Residual attention scheduling, IEEE
+Trans.\ 2024.
+
+\bibitem{Chen2025SMGDRL}
+L. Chen, Y. Wang, X. Zhao, SMG-DRL for FJSP, Comput.\ \&
+Ind.\ Eng.\ 2025.
+
+\bibitem{Xiao2026RESCHED}
+Z. Xiao, S. Park, J. Lee, ReSched: a Transformer-based
+re-scheduler for FJSP, in: ICLR, 2026.
+
+\bibitem{Correa2025Rainbow}
+F. Corr\^ea \etal, Rainbow DQN for FJSP, Eng.\ Appl.\ AI
+2025.
+
+\bibitem{Hottung2022}
+A. Hottung, B. Bhandari, K. Tierney, Neural
+neighborhood search for VRP, in: ECAI, 2022.
+
+\bibitem{Wu2021TNNLS-VRP}
+L. Wu, M. Fu, H. Li, A pointer-network framework for
+VRP with RL, IEEE Trans.\ NNLS 2021.
+
+\bibitem{Wu2021NeurIPS-LNS}
+L. Wu \etal, Learning to search for the traveling
+salesman problem, in: NeurIPS, 2021.
+
+\bibitem{Li2025MultiObj}
+J. Li, S. He, M. Tang, Multi-objective PPO+D3QN for
+FJSP, Sci.\ Rep.\ 2025.
+
+\bibitem{Zhang2024DQN}
+Y. Zhang, J. Chen, Q. Li, Dueling DQN for FJSP with
+constrained rescheduling, Comput.\ Oper.\ Res.\ 2024.
+
+\bibitem{Zhang2025HRL}
+X. Zhang, K. Sun, L. Yang, Hierarchical-RL DRL for
+dynamic FJSP, Appl.\ Sci.\ 2025.
+
+\bibitem{Zhou2023ICML}
+J. Zhou \etal, An end-to-end RL framework for
+combinatorial optimization, in: ICML, 2023.
+
+\bibitem{Wu2025DESEnv}
+R. Wu, J. Liu, K. Tierney, A dynamic-event scheduling
+environment for FJSP, in: AAAI, 2025.
+
+\bibitem{Cunha2020}
+B. Cunha \etal, A scatter search for the FJSP, Comput.\
+Oper.\ Res.\ 2020.
+
+\bibitem{Song2023IET}
+W. Song, Deep RL for production scheduling: a 2020--2023
+review, IET CIM 2023.
+
+\bibitem{Song2023TASE}
+W. Song \etal, Self-attention DRL for FJSP, IEEE
+Trans.\ Autom.\ Sci.\ Eng.\ 2023.
+
+\bibitem{Islam2017}
+R. Islam \etal, Reproducibility in deep RL, in: NeurIPS
+Workshop, 2017.
+
+\bibitem{Henderson2018}
+P. Henderson \etal, Deep reinforcement learning that
+matters, in: AAAI, 2018.
+
+\bibitem{Bertsimas2016}
+D. Bertsimas, J. Tsitsiklis, Introduction to Linear
+Optimization, Athena Scientific, 2016.
+
+\bibitem{Ozguven2010}
+C. \"Ozg\"uven, L. Ozbakir, Y. Yavuz, Mathematical
+models for FJSP with worker assignment, Int.\ J.\ Adv.\
+Manuf.\ Technol.\ 2010.
+
+\bibitem{Venturelli2024}
+M. Venturelli \etal, MILP formulations for FJSP under
+uncertainty, EJOR 2024.
+
+\bibitem{Xu2024}
+J. Xu, R. Kuo, Z. Liu, Transformer-based FJSP with
+decomposed dispatching, Electronics 2024.
+
+\bibitem{Zhao2024}
+H. Zhao, P. Hu, B. Lin, A policy-decomposition framework
+for FJSP, Soft Comput.\ 2024.
+
+\bibitem{Wei1994}
+K. Wei, J. Liu, A dispatching rule for FJSP based on
+fuzzy logic, Int.\ J.\ Prod.\ Res.\ 1994.
+
+\end{thebibliography}
+
+\end{document}

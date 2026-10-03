@@ -102,6 +102,8 @@ class HeterogeneousGraphTransformerEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.num_heads = num_heads
         self.num_blocks = num_blocks
+        self.ffn_dim = ffn_dim
+        self.dropout = dropout
 
         # Heterogeneous input projections: op and machine get *different* MLPs.
         self.op_input = nn.Sequential(

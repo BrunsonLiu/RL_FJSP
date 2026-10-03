@@ -1,0 +1,22 @@
+{
+  "id": "C13",
+  "claim": "Current coupled_reassign can realize a profitable machine reassignment",
+  "verdict": "refuted",
+  "evidence": {
+    "initial_valid": true,
+    "initial_makespan": 10,
+    "returned_assignments": [
+      [
+        0,
+        0,
+        0
+      ]
+    ],
+    "unchanged": true,
+    "potential_estimate": 0.0,
+    "alternative_valid": true,
+    "alternative_makespan": 1,
+    "achievable_reduction": 9
+  },
+  "resolution": "The moving operation remains in other_ops and is added again on the target machine; decoding fails and broad exception handling returns the unchanged assignment."
+}
