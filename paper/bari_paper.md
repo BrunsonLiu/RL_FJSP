@@ -1,5 +1,9 @@
 # BARI: Bottleneck-Aware Reinforced Improvement for the Flexible Job Shop Scheduling Problem
 
+> Historical working draft. The [history audit](../docs/history_audit/REPORT.md)
+> identifies mechanism bugs, limited ablation evidence, and unsupported claims.
+> The text below is retained for provenance and is not a verified results report.
+
 **Authors:** Project RL_FJSP team
 **Date:** 2026-06-18
 **Status:** Working draft

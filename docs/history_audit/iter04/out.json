@@ -1,0 +1,10 @@
+{
+  "id": "C04",
+  "claim": "The implemented policy has one hidden layer and 321 parameters",
+  "verdict": "refuted",
+  "evidence": {
+    "32": 1377,
+    "64": 4801
+  },
+  "resolution": "Current model has two hidden layers, 1377 parameters at width 32 and 4801 at width 64. Draft features and argmin rule also disagree with source."
+}

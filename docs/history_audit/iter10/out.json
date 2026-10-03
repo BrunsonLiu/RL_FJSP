@@ -1,0 +1,17 @@
+{
+  "id": "C10",
+  "claim": "BC+AC has a saved legal MK01 schedule with makespan 49",
+  "verdict": "verified",
+  "evidence": {
+    "path": "data/results/bc_ac_mk01_best_schedule.json",
+    "operations": 55,
+    "makespan": 49,
+    "filename_instance": "mk01",
+    "valid_instance_matches": [
+      "mk01"
+    ],
+    "valid_for_filename_instance": true,
+    "errors": []
+  },
+  "resolution": "Scope to the saved schedule and historical run; new feature versions and multi-seed stability require separate checks."
+}

@@ -1,5 +1,8 @@
 # 论文 Markdown 总结
 
+> 历史工作草稿。本轮审计发现部分网络说明、结果表和贡献解释与当前代码或保存工件不一致。
+> 复用数字或结论前，请先查看 [历史审计](../docs/history_audit/REPORT.md)。下文保留用于追溯。
+
 ## 一、论文基本信息
 
 | 项    | 值                                                                                                                   |
@@ -235,4 +238,3 @@ experiments/rl_baselines/l2i_baseline.py           # L2I re-impl (ICLR 2024)
 - 加 architecture 图(1 小时)
 - 加 training curve 图(1 小时)
 - <br />
-

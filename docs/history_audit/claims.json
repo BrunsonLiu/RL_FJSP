@@ -1,0 +1,418 @@
+[
+  {
+    "id": "C01",
+    "claim": "5.64% is the quality of the PA-REINFORCE policy itself",
+    "verdict": "fragile",
+    "evidence": {
+      "historical_pipeline_gap_percent": 5.636768701057733,
+      "median": 2.8776978417266186,
+      "without_mk13": 6.271953176382455,
+      "policy_only_gap_percent": 10.554172077051925
+    },
+    "resolution": "Attribute the arithmetic to the historical composite pipeline and internal reference table, not the standalone policy or a current literature record."
+  },
+  {
+    "id": "C02",
+    "claim": "The saved MK12 schedule substantiates makespan 508",
+    "verdict": "refuted",
+    "evidence": {
+      "path": "data/results/sota_mk12_schedule.json",
+      "operations": 193,
+      "makespan": 524,
+      "filename_instance": "mk12",
+      "valid_instance_matches": [
+        "mk12"
+      ],
+      "valid_for_filename_instance": true,
+      "errors": []
+    },
+    "resolution": "Saved schedule validates at 524; 508 remains unsupported by this artifact."
+  },
+  {
+    "id": "C03",
+    "claim": "MK13 416 is a new/current SOTA",
+    "verdict": "fragile",
+    "evidence": {
+      "schedule": {
+        "path": "data/results/sota_mk13_schedule.json",
+        "operations": 231,
+        "makespan": 416,
+        "filename_instance": "mk13",
+        "valid_instance_matches": [
+          "mk13"
+        ],
+        "valid_for_filename_instance": true,
+        "errors": []
+      },
+      "internal_reference": 430
+    },
+    "resolution": "Retain legal makespan 416 and its difference from the stored reference; external novelty/rank is unverified."
+  },
+  {
+    "id": "C04",
+    "claim": "The implemented policy has one hidden layer and 321 parameters",
+    "verdict": "refuted",
+    "evidence": {
+      "32": 1377,
+      "64": 4801
+    },
+    "resolution": "Current model has two hidden layers, 1377 parameters at width 32 and 4801 at width 64. Draft features and argmin rule also disagree with source."
+  },
+  {
+    "id": "C05",
+    "claim": "The archived evidence supports 5 seeds on all 15 instances and 375 comparable runs",
+    "verdict": "fragile",
+    "evidence": {
+      "explicit_seed_rows": 12,
+      "explicit_seed_runs": 60,
+      "missing_instances": [
+        "mk07",
+        "mk08",
+        "mk09"
+      ]
+    },
+    "resolution": "These explicit seed files cover 12 instances/60 runs; remaining runs need a unified manifest before asserting complete comparable coverage."
+  },
+  {
+    "id": "C06",
+    "claim": "SA is generally a negative-contribution method",
+    "verdict": "fragile",
+    "evidence": {
+      "regressions": [
+        "mk04",
+        "mk05",
+        "mk06",
+        "mk07",
+        "mk09",
+        "mk10",
+        "mk11",
+        "mk12",
+        "mk15"
+      ],
+      "improvements": [],
+      "stage_means": {
+        "ef_makespan": 394.06666666666666,
+        "reinforce_best": 307.93333333333334,
+        "ils_best": 295.8,
+        "sa_makespan": 301.8666666666667,
+        "final_best": 294.6666666666667,
+        "lit_target": 287.6
+      },
+      "current_probe": [
+        {
+          "seed": 0,
+          "initial": 8,
+          "returned": 6,
+          "legal": true
+        },
+        {
+          "seed": 1,
+          "initial": 8,
+          "returned": 6,
+          "legal": true
+        },
+        {
+          "seed": 2,
+          "initial": 8,
+          "returned": 6,
+          "legal": true
+        }
+      ]
+    },
+    "resolution": "Observed historical endpoint regressions are descriptive, not a universal statement about SA; distinguish last endpoint from best-so-far and heterogeneous configurations."
+  },
+  {
+    "id": "C07",
+    "claim": "Tabu search only improves MK15",
+    "verdict": "refuted",
+    "evidence": [
+      {
+        "instance": "mk10",
+        "lit_target": 197,
+        "rl_best": 242,
+        "ils_ms": 231,
+        "ts_ms": 224,
+        "final_best": 224,
+        "gap_to_lit": 27
+      },
+      {
+        "instance": "mk15",
+        "lit_target": 341,
+        "rl_best": 408,
+        "ils_ms": 380,
+        "ts_ms": 370,
+        "final_best": 370,
+        "gap_to_lit": 29
+      },
+      {
+        "instance": "mk09",
+        "lit_target": 307,
+        "rl_best": 339,
+        "ils_ms": 338,
+        "ts_ms": 332,
+        "final_best": 332,
+        "gap_to_lit": 25
+      }
+    ],
+    "resolution": "The recorded tabu runs improve their own starts on MK10, MK15, and MK09; MK09 matches an already better aggregate result."
+  },
+  {
+    "id": "C08",
+    "claim": "15/15 wins over L2I establish superiority over the published method",
+    "verdict": "fragile",
+    "evidence": {
+      "pairs": [
+        {
+          "instance": "mk01",
+          "l2i": 60,
+          "pipeline": 42
+        },
+        {
+          "instance": "mk02",
+          "l2i": 43,
+          "pipeline": 28
+        },
+        {
+          "instance": "mk03",
+          "l2i": 257,
+          "pipeline": 204
+        },
+        {
+          "instance": "mk04",
+          "l2i": 88,
+          "pipeline": 73
+        },
+        {
+          "instance": "mk05",
+          "l2i": 228,
+          "pipeline": 176
+        },
+        {
+          "instance": "mk06",
+          "l2i": 142,
+          "pipeline": 68
+        },
+        {
+          "instance": "mk07",
+          "l2i": 199,
+          "pipeline": 143
+        },
+        {
+          "instance": "mk08",
+          "l2i": 673,
+          "pipeline": 523
+        },
+        {
+          "instance": "mk09",
+          "l2i": 580,
+          "pipeline": 332
+        },
+        {
+          "instance": "mk10",
+          "l2i": 454,
+          "pipeline": 224
+        },
+        {
+          "instance": "mk11",
+          "l2i": 795,
+          "pipeline": 619
+        },
+        {
+          "instance": "mk12",
+          "l2i": 689,
+          "pipeline": 508
+        },
+        {
+          "instance": "mk13",
+          "l2i": 773,
+          "pipeline": 416
+        },
+        {
+          "instance": "mk14",
+          "l2i": 988,
+          "pipeline": 694
+        },
+        {
+          "instance": "mk15",
+          "l2i": 721,
+          "pipeline": 370
+        }
+      ],
+      "wins": 15,
+      "wins_without_largest_difference": 14,
+      "current_probe": {
+        "status": "failed",
+        "error_type": "NameError",
+        "error": "name 'init_ms' is not defined"
+      }
+    },
+    "resolution": "Restrict to this local operator-selection baseline; current one-step reproducibility, initialization, multi-start search and budgets require repair/reconciliation; published-method fidelity has not been verified."
+  },
+  {
+    "id": "C09",
+    "claim": "Stage gains are ILS -12.1%, SA +6.1%, and final -7.2%",
+    "verdict": "refuted",
+    "evidence": {
+      "means": {
+        "ef_makespan": 394.06666666666666,
+        "reinforce_best": 307.93333333333334,
+        "ils_best": 295.8,
+        "sa_makespan": 301.8666666666667,
+        "final_best": 294.6666666666667,
+        "lit_target": 287.6
+      },
+      "relative_percent": {
+        "RL_vs_EF": 21.857553713415662,
+        "ILS_vs_RL": 3.9402468066681076,
+        "SA_vs_ILS": 2.0509353166553965
+      }
+    },
+    "resolution": "The cited numbers are mean makespan-unit differences, not percentages; final drop is not attributable exclusively to tabu."
+  },
+  {
+    "id": "C10",
+    "claim": "BC+AC has a saved legal MK01 schedule with makespan 49",
+    "verdict": "verified",
+    "evidence": {
+      "path": "data/results/bc_ac_mk01_best_schedule.json",
+      "operations": 55,
+      "makespan": 49,
+      "filename_instance": "mk01",
+      "valid_instance_matches": [
+        "mk01"
+      ],
+      "valid_for_filename_instance": true,
+      "errors": []
+    },
+    "resolution": "Scope to the saved schedule and historical run; new feature versions and multi-seed stability require separate checks."
+  },
+  {
+    "id": "C11",
+    "claim": "HGT fine-tuning is a proven dead end",
+    "verdict": "fragile",
+    "evidence": [
+      {
+        "checkpoint": "data/results/hgt_bc_mk01_ss.pt",
+        "status": "evaluated",
+        "makespans": [
+          59,
+          59,
+          59,
+          59,
+          59
+        ],
+        "valid": true
+      },
+      {
+        "checkpoint": "data/results/hgt_a2c_mk01_bc.pt",
+        "status": "evaluated",
+        "makespans": [
+          60,
+          60,
+          60,
+          60,
+          60
+        ],
+        "valid": true
+      },
+      {
+        "checkpoint": "data/results/hgt_ppo_mk01_bc_v5.pt",
+        "status": "evaluated",
+        "makespans": [
+          66,
+          66,
+          66,
+          66,
+          66
+        ],
+        "valid": true
+      }
+    ],
+    "resolution": "Report checkpoint reevaluations and their compatibility; a few configurations/checkpoints do not establish that the whole method family fails."
+  },
+  {
+    "id": "C12",
+    "claim": "BARI main table improves EF on 4/5 instances",
+    "verdict": "refuted",
+    "evidence": {
+      "bari_full": {
+        "values": [
+          57,
+          51,
+          323,
+          89,
+          220
+        ],
+        "mean": 148,
+        "improved": 3
+      },
+      "single_perspective": {
+        "values": [
+          53,
+          61,
+          331,
+          91,
+          220
+        ],
+        "mean": 151.2,
+        "improved": 2
+      },
+      "binary_cp": {
+        "values": [
+          57,
+          49,
+          323,
+          89,
+          220
+        ],
+        "mean": 147.6,
+        "improved": 3
+      }
+    },
+    "resolution": "The local full-table artifact improves 3/5 instances; missing local artifacts cannot reproduce this count. Keep architectural generalization as a separate, still limited single-seed pilot observation."
+  },
+  {
+    "id": "C13",
+    "claim": "Current coupled_reassign can realize a profitable machine reassignment",
+    "verdict": "refuted",
+    "evidence": {
+      "initial_valid": true,
+      "initial_makespan": 10,
+      "returned_assignments": [
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "unchanged": true,
+      "potential_estimate": 0.0,
+      "alternative_valid": true,
+      "alternative_makespan": 1,
+      "achievable_reduction": 9
+    },
+    "resolution": "The moving operation remains in other_ops and is added again on the target machine; decoding fails and broad exception handling returns the unchanged assignment."
+  },
+  {
+    "id": "C14",
+    "claim": "The improvement-potential estimate is an upper bound on achievable reduction",
+    "verdict": "refuted",
+    "evidence": {
+      "initial_valid": true,
+      "initial_makespan": 10,
+      "returned_assignments": [
+        [
+          0,
+          0,
+          0
+        ]
+      ],
+      "unchanged": true,
+      "potential_estimate": 0.0,
+      "alternative_valid": true,
+      "alternative_makespan": 1,
+      "achievable_reduction": 9
+    },
+    "resolution": "A legal alternative gains 9 while the estimate is 0; use heuristic-score wording until a valid bound is derived."
+  }
+]

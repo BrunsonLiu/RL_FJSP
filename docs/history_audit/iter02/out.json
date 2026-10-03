@@ -1,0 +1,17 @@
+{
+  "id": "C02",
+  "claim": "The saved MK12 schedule substantiates makespan 508",
+  "verdict": "refuted",
+  "evidence": {
+    "path": "data/results/sota_mk12_schedule.json",
+    "operations": 193,
+    "makespan": 524,
+    "filename_instance": "mk12",
+    "valid_instance_matches": [
+      "mk12"
+    ],
+    "valid_for_filename_instance": true,
+    "errors": []
+  },
+  "resolution": "Saved schedule validates at 524; 508 remains unsupported by this artifact."
+}

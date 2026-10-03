@@ -1,0 +1,9 @@
+# Inferred from the user's request to audit the existing research history.
+draft: paper/SUMMARY.md
+dataset: data/results
+analysis_cmd: python
+report: docs/history_audit/REPORT.md
+sandbox_root: docs/history_audit
+budget: 14
+# Additional evidence: paper/bari_paper.md, docs/current_status.md,
+# implementation sources, saved schedules, and local-only experiment artifacts.

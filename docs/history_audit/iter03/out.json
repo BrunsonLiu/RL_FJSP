@@ -1,0 +1,20 @@
+{
+  "id": "C03",
+  "claim": "MK13 416 is a new/current SOTA",
+  "verdict": "fragile",
+  "evidence": {
+    "schedule": {
+      "path": "data/results/sota_mk13_schedule.json",
+      "operations": 231,
+      "makespan": 416,
+      "filename_instance": "mk13",
+      "valid_instance_matches": [
+        "mk13"
+      ],
+      "valid_for_filename_instance": true,
+      "errors": []
+    },
+    "internal_reference": 430
+  },
+  "resolution": "Retain legal makespan 416 and its difference from the stored reference; external novelty/rank is unverified."
+}

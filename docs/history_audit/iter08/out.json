@@ -1,0 +1,92 @@
+{
+  "id": "C08",
+  "claim": "15/15 wins over L2I establish superiority over the published method",
+  "verdict": "fragile",
+  "evidence": {
+    "pairs": [
+      {
+        "instance": "mk01",
+        "l2i": 60,
+        "pipeline": 42
+      },
+      {
+        "instance": "mk02",
+        "l2i": 43,
+        "pipeline": 28
+      },
+      {
+        "instance": "mk03",
+        "l2i": 257,
+        "pipeline": 204
+      },
+      {
+        "instance": "mk04",
+        "l2i": 88,
+        "pipeline": 73
+      },
+      {
+        "instance": "mk05",
+        "l2i": 228,
+        "pipeline": 176
+      },
+      {
+        "instance": "mk06",
+        "l2i": 142,
+        "pipeline": 68
+      },
+      {
+        "instance": "mk07",
+        "l2i": 199,
+        "pipeline": 143
+      },
+      {
+        "instance": "mk08",
+        "l2i": 673,
+        "pipeline": 523
+      },
+      {
+        "instance": "mk09",
+        "l2i": 580,
+        "pipeline": 332
+      },
+      {
+        "instance": "mk10",
+        "l2i": 454,
+        "pipeline": 224
+      },
+      {
+        "instance": "mk11",
+        "l2i": 795,
+        "pipeline": 619
+      },
+      {
+        "instance": "mk12",
+        "l2i": 689,
+        "pipeline": 508
+      },
+      {
+        "instance": "mk13",
+        "l2i": 773,
+        "pipeline": 416
+      },
+      {
+        "instance": "mk14",
+        "l2i": 988,
+        "pipeline": 694
+      },
+      {
+        "instance": "mk15",
+        "l2i": 721,
+        "pipeline": 370
+      }
+    ],
+    "wins": 15,
+    "wins_without_largest_difference": 14,
+    "current_probe": {
+      "status": "failed",
+      "error_type": "NameError",
+      "error": "name 'init_ms' is not defined"
+    }
+  },
+  "resolution": "Restrict to this local operator-selection baseline; current one-step reproducibility, initialization, multi-start search and budgets require repair/reconciliation; published-method fidelity has not been verified."
+}

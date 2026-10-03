@@ -141,6 +141,8 @@ before using this entry as a reproduced result.
 
 See [current status](docs/current_status.md) and
 [instance provenance](data/instances/README.md).
+The [research history audit](docs/history_audit/REPORT.md) maps prior attempts
+to available evidence, reusable assets, and unresolved implementation issues.
 
 ## Contributing and Publication
 

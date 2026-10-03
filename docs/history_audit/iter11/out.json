@@ -1,0 +1,44 @@
+{
+  "id": "C11",
+  "claim": "HGT fine-tuning is a proven dead end",
+  "verdict": "fragile",
+  "evidence": [
+    {
+      "checkpoint": "data/results/hgt_bc_mk01_ss.pt",
+      "status": "evaluated",
+      "makespans": [
+        59,
+        59,
+        59,
+        59,
+        59
+      ],
+      "valid": true
+    },
+    {
+      "checkpoint": "data/results/hgt_a2c_mk01_bc.pt",
+      "status": "evaluated",
+      "makespans": [
+        60,
+        60,
+        60,
+        60,
+        60
+      ],
+      "valid": true
+    },
+    {
+      "checkpoint": "data/results/hgt_ppo_mk01_bc_v5.pt",
+      "status": "evaluated",
+      "makespans": [
+        66,
+        66,
+        66,
+        66,
+        66
+      ],
+      "valid": true
+    }
+  ],
+  "resolution": "Report checkpoint reevaluations and their compatibility; a few configurations/checkpoints do not establish that the whole method family fails."
+}

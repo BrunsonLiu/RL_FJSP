@@ -1,0 +1,21 @@
+{
+  "id": "C09",
+  "claim": "Stage gains are ILS -12.1%, SA +6.1%, and final -7.2%",
+  "verdict": "refuted",
+  "evidence": {
+    "means": {
+      "ef_makespan": 394.06666666666666,
+      "reinforce_best": 307.93333333333334,
+      "ils_best": 295.8,
+      "sa_makespan": 301.8666666666667,
+      "final_best": 294.6666666666667,
+      "lit_target": 287.6
+    },
+    "relative_percent": {
+      "RL_vs_EF": 21.857553713415662,
+      "ILS_vs_RL": 3.9402468066681076,
+      "SA_vs_ILS": 2.0509353166553965
+    }
+  },
+  "resolution": "The cited numbers are mean makespan-unit differences, not percentages; final drop is not attributable exclusively to tabu."
+}
